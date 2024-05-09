@@ -1,0 +1,6 @@
+*.cfg
+*.csv
+*.clixml
+*.xml
+*.log
+*.sqlite

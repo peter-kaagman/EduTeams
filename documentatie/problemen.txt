@@ -1,0 +1,44 @@
+Bestaan Azure team in de database (magister) en vice versa?
+Deze teams niet:
+
+Controlle of Azure teams in Magister (db) staan
+Azure team 2324-01A-tpu staat niet in de database. <= team heeft een eigenaar, echter geen lln, geen legitiem team meer?
+Azure team 2324-0H4-mentor staat niet in de database. <= team is een jaarlaag team, staat inderdaad niet in magister
+Azure team 2324-0H5-mentor staat niet in de database. <= team is een jaarlaag team, staat inderdaad niet in magister
+Azure team 2324-0M4-mentor staat niet in de database. <= team is een jaarlaag team, staat inderdaad niet in magister
+Azure team 2324-0v3.hndv3 staat niet in de database. <= team zonder eigenaar
+Azure team 2324-0V6-mentor staat niet in de database. <= team is een jaarlaag team, staat inderdaad niet in magister
+Azure team 2324-81kb.tfchal1 staat niet in de database. <= team heeft een eigenaar, echter geen lln, geen legitiem team meer?
+Azure team 2324-81m.tfchal1 staat niet in de database. <= team heeft een eigenaar, echter geen lln, geen legitiem team meer?
+Azure team 2324-81mk.tfchal1 staat niet in de database. <= team heeft een eigenaar, echter geen lln, geen legitiem team meer?
+Azure team 2324-8K3A-wi staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8K3B-men staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8K3B-wi staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8K3C-bi staat niet in de database. <= team zonder eigenaar
+Azure team 2324-8K4A-wi staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8K4B-wi staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8m4.wi8 staat niet in de database. <= docent met sterretje... uit dienst?
+Azure team 2324-8M4A-wi staat niet in de database. <= docent met sterretje... uit dienst?
+
+Controlle of Magister teams in Azure staan (geen idee of ze leerlingen hebben op dit moment)
+(Dit zouden de team kunnen zijn die aangemaakt moeten worden... achterstand omdat de sync uit staa?)
+Magister team 2324-0V2A-mas staat niet in Azure. <= Jenny de Haas, geen bijzonderheden
+Magister team 2324-8B4B-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-0H2A-mas staat niet in Azure. <= Katie Meijer, geen bijzonderheden
+Magister team 2324-8K4C-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-_DETA-re staat niet in Azure. <= Wim Driessens, geen bijzonderheden, rare naam... detachering?
+Magister team 2324-8K4B-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-0V2D-mas staat niet in Azure. <= Isabella Blankendaal, geen bijzonderheden
+Magister team 2324-0M2A-mas staat niet in Azure. <= Kadija Bouslam, geen bijzonderheden
+Magister team 2324-0H2D-mas staat niet in Azure. <= Eveline Koehorst, geen bijzonderheden
+Magister team 2324-0M2B-mas staat niet in Azure. <= Eline Entius, geen bijzonderheden
+Magister team 2324-0V2C-mas staat niet in Azure. <= Monique Groot, geen bijzonderheden
+Magister team 2324-0H2C-mas staat niet in Azure. <= Olaf Spaans, geen bijzonderheden
+Magister team 2324-8K4A-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-8K4D-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-8E4B-na staat niet in Azure. <= Naomi van Koperen, geen bijzonderheden
+Magister team 2324-0M2C-mas staat niet in Azure. <= Eduard Offerhaus, geen bijzonderheden
+Magister team 2324-0V2B-mas staat niet in Azure. <= Peter Lust, geen bijzonderheden
+Magister team 2324-0H2B-mas staat niet in Azure. <= Jeanette van Haaster + nog iemand, geen bijzonderheden
+Magister team 2324-8B4A-dvpr staat niet in Azure. <= Cornelis Winkel, geen bijzonderheden
+Magister team 2324-0m2.tpu2 staat niet in Azure. <= 16 docenten, kan geen jaarlaag zijn komt uit magister. Wat is het dan wel?
