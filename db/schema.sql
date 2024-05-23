@@ -1,19 +1,3 @@
--- Locatie wordt niet meer gebruikt
--- Create Table If Not Exists locatie(
---     naam Text Not Null Unique,
---     short Text Not Null Unique,
---     brin Text Not Null Unique
--- );
-
--- Insert Into locatie (ROWID, naam, short, brin) values
---     (1, 'OSG West-Friesland', 'OSG', '25DA00'),
---     (2, 'Copernicus SG', 'CSG', '25DA02'),
---     (3, 'SG De Triade', 'TRI', '25DA09'),
---     (4, 'SG Newton', 'NWT', '25DA08'),
---     (99, 'Onbekend', 'XXX', '25DAXX')
---     On Conflict (ROWID) Do Nothing
--- ;
-
 Create Table If Not Exists magisterteam(
     naam Text Not Null Unique,
     type Text Not NUll

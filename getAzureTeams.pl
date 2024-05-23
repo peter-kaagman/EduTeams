@@ -20,7 +20,7 @@ Config::Simple->import_from("$FindBin::Bin/EduTeams.cfg",\%config) or die("No co
 
 my $logger = Logger->new(
     'filename' => "$FindBin::Bin/Log/EduTeams.log",
-    'verbose' => 1
+    'verbose' => 0
 );
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
@@ -38,8 +38,9 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 $dbh->do('Delete From azuredocent'); # Truncate the table 
 my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
 my $sth_azuredocent = $dbh->prepare($qry);
-$qry = "Select ROWID From azuredocent Where upn = ?";
-my $sth_azuredocent_zoeken = $dbh->prepare($qry);
+my $AzureDocenten; # ipv zoeken in de database
+#$qry = "Select ROWID From azuredocent Where upn = ?";
+#my $sth_azuredocent_zoeken = $dbh->prepare($qry);
 
 # azuredocrooster
 $dbh->do('Delete From azuredocrooster'); # Truncate the table 
@@ -50,8 +51,9 @@ my $sth_azuredocrooster = $dbh->prepare($qry);
 $dbh->do('Delete From azureleerling'); # Truncate the table 
 $qry = "Insert Into azureleerling (upn, naam) values (?,?) ";
 my $sth_azureleerling = $dbh->prepare($qry);
-$qry = "Select ROWID From azureleerling Where upn = ?";
-my $sth_azureleerling_zoeken = $dbh->prepare($qry);
+my $AzureLeerlingen; # ipv zoeken in de database
+#$qry = "Select ROWID From azureleerling Where upn = ?";
+#my $sth_azureleerling_zoeken = $dbh->prepare($qry);
 
 # azureleerlingrooster
 $dbh->do('Delete From azureleerlingrooster'); # Truncate the table 
@@ -62,9 +64,6 @@ my $sth_azureleerlingrooster = $dbh->prepare($qry);
 $dbh->do('Delete From azureteam'); # Truncate the table 
 $qry = "Insert Into azureteam (id, description, displayName) values (?,?,?) ";
 my $sth_azureteam = $dbh->prepare($qry);
-# Een azure team bestaat nooit, hoef dus niet te zoeken
-#$qry = "Select ROWID From azureteam Where naam = ?";
-#my $sth_azureteam_zoeken = $dbh->prepare($qry);
 
 my $groups_object = MsGroups->new(
 	'app_id'        => $config{'APP_ID'},
@@ -81,36 +80,34 @@ my $groups_object = MsGroups->new(
 # Geeft de ROWID terug
 sub getAzureDocentROWID {
     my $docent = shift;
-    $sth_azuredocent_zoeken->execute(lc($docent->{'userPrincipalName'}));
-    my $row = $sth_azuredocent_zoeken->fetchrow_hashref();
-    #print Dumper $row;
-    if ($row->{'rowid'}){
+    if ($AzureDocenten->{$docent->{'userPrincipalName'}}){
         # docent gevonden => return ROWID
-        return $row->{'rowid'};
+        return $AzureDocenten->{$docent->{'userPrincipalName'}};
     }else{
         # Docent niet gevonden => aanmaken
         #print Dumper $docent;
         #my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
         $sth_azuredocent->execute(lc($docent->{'userPrincipalName'}),$docent->{'displayName'});
-        return $dbh->last_insert_id("","","azuredocent","ROWID");
+        my $rowid =  $dbh->last_insert_id("","","azuredocent","ROWID");
+        $AzureDocenten->{$docent->{'userPrincipalName'}} = $rowid;
+        return $rowid;
     }
 }
 # Maakt een entry voor de leerling als die nog niet bestaat
 # Geeft de ROWID terug
 sub getAzureLeerlingROWID {
     my $leerling = shift;
-    $sth_azureleerling_zoeken->execute(lc($leerling->{'userPrincipalName'}));
-    my $row = $sth_azureleerling_zoeken->fetchrow_hashref();
-    #print Dumper $row;
-    if ($row->{'rowid'}){
+    if ($AzureLeerlingen->{$leerling->{'userPrincipalName'}}){
         # leerling gevonden => return ROWID
-        return $row->{'rowid'};
+        return $AzureLeerlingen->{$leerling->{'userPrincipalName'}};
     }else{
         # Leerling niet gevonden => aanmaken
         #print Dumper $docent;
         #my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
         $sth_azureleerling->execute(lc($leerling->{'userPrincipalName'}),$leerling->{'displayName'});
-        return $dbh->last_insert_id("","","azureleerling","ROWID");
+        my $rowid =  $dbh->last_insert_id("","","azureleerling","ROWID");
+        $AzureLeerlingen->{$leerling->{'userPrincipalName'}} = $rowid;
+        return $rowid;
     }
 }
 
@@ -126,6 +123,7 @@ sub getAzureTeamROWID {
 if ($groups_object->_get_access_token){
     # Eerst de groepen ophalen in Graph
 	my $groups = $groups_object->fetch_groups();
+    my (@retryOwner, @retryMember); # Groups without owners or members are retried
 	my $count = scalar @$groups;
 	$logger->make_log("$FindBin::Bin/$FindBin::Script $count groupen opgehaald.");
 	while (my ($i, $group) = each @{$groups}){
@@ -150,26 +148,46 @@ if ($groups_object->_get_access_token){
             # Eigenaren (docenten ophalen)
             my $owners = $group_object->fetch_owners();
             # $owners is een AOH
+            # Store a group without owners for retry
+            if (! @$owners ){
+                push (@retryOwner, $group);
+                say "Geen members". $group->{'description'};
+            }
+
             foreach my $owner (@$owners){
                 $logger->make_log("$FindBin::Bin/$FindBin::Script Docent gevonden: ".$owner->{'displayName'});
                 my $azuredocentROWID = getAzureDocentROWID($owner);
                 # RowId docent en team is bekend => toevoegen aan het rooster
                 $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID)
             }
+
             # Leden (leerlingen ophalen)
             my $members = $group_object->fetch_members();
             # $members is een AOH
+            my $count = 0;
             foreach my $member (@$members){
                 # NB Docenten zijn zelf ook lid, deze dus overslaan
-                if ($member->{'userPrincipalName'} =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
+                if (lc($member->{'userPrincipalName'}) =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
+                    $count++;
                     $logger->make_log("$FindBin::Bin/$FindBin::Script Leerling gevonden:".$member->{'displayName'});
                     my $azureleerlingROWID = getAzureLeerlingROWID($member);
                     # RowId leerling en team is bekend => toevoegen aan het rooster
                     $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
                 }
             }
+            # $count is the number of members excluding those who are allso owner
+            #say $group->{'description'} .' heeft '. $count . 'leden'; 
+            if ( $count eq 0 ){
+                say "Geen members". $group->{'description'};
+                push (@retryMember, $group);
+            }
+
         }
 	}
+    say "No Owner:";
+    print Dumper \@retryOwner;
+    say "No member:";
+    print Dumper \@retryMember;
 }else{
 	$logger->make_log("$FindBin::Bin/$FindBin::Script No token!");
 }

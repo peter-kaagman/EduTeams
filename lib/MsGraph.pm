@@ -105,8 +105,9 @@ sub callAPI { # {{{1
 	my $self = shift;					# Get a refence to the object itself
 	my $url = shift;					# Get the URL from the function call
 	my $verb = shift;					# Get the method form the function call
+	my $try = shift || 1;
 	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'send_te' => '0',	# not really sure what this does
+		'timeout' => '5',
 	);
 	# Create the header
 	my @header =	[
@@ -123,7 +124,11 @@ sub callAPI { # {{{1
 	);	
 	# Let the useragent make the request
 	my $result = $ua->request($r);
-	# return a reference to the result
+	# adding error handling
+	# rc 429 is throttling
+	if (! $result->{"_rc"} eq "200"){
+		print Dumper $result;
+	}
 	return $result;
 } # }}}
 

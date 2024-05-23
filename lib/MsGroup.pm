@@ -37,11 +37,7 @@ sub do_fetch { # {{{1
 	my $self = shift;							# get a reference to the object
 	my $url = shift;							# get the URL from the function call
 	my $found = shift;							# get the array reference which holds the result
-	my $result = $self->callAPI($url, 'GET');	# do_getch calls callAPI to do the HTTP request
-	# # debug problemen met members
-	# say "\n\n\nZoeken naar: $url";
-	# print Dumper $result;						# Dump the complete result
-	# # end debug
+	my $result = $self->callAPI($url, 'GET');	# do_fetch calls callAPI to do the HTTP request
 	# Process if rc = 200
 	if ($result->is_success){
 		my $reply =  decode_json($result->decoded_content);
@@ -78,7 +74,6 @@ sub fetch_owners { #	{{{1
 sub fetch_members { #	{{{1
 	my $self = shift;							# get a reference to the object itself
 	my @members;								# an array to hold the result
-	$self->_set_consistencylevel('eventual');	# setting consistencylevel (did this for debugging)
 	# compose an URL
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups/".$self->_get_id."/members/?";
 	# add a filter if needed (not doing any  filtering though)
@@ -90,9 +85,7 @@ sub fetch_members { #	{{{1
 		$url .= $self->_get_select;
 	}
 	$url .= '&$count=true';		# adding $count just to be sure
-	#say "Fetching $url";
 	do_fetch($self,$url, \@members); # actual fetch is done in do_fetch()
-	#print Dumper \@members; # dump the result for debugging
 	return  \@members; # return a reference to the resul
 	
 }#	}}}
