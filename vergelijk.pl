@@ -6,7 +6,8 @@ use v5.11;
 use strict;
 use warnings;
 use DBI;
-use Data::Dumper;
+#use Data::Dumper;
+use Data::Printer;
 use FindBin;
 use Config::Simple;
 use lib "$FindBin::Bin/lib";
@@ -105,25 +106,32 @@ $sth->finish;
 $logger->make_log("Aantal Magister teams: " . scalar keys %$Magister);
 $logger->make_log("$FindBin::Bin/$FindBin::Script Magister hash gemaakt.");
 
-# Vergelijk Magister met Azure
-$logger->make_log("$FindBin::Bin/$FindBin::Script Magister vergelijken met Azure.");
 
 my $ToDo;
+# Vergelijk Magister met Azure
+
+# Mutaties vanuit Magister hebben invloed op de vergelijking vanuit Azure die hierop volgt.
+# het archiveren van teams en het toevoegen van leerlingen dus direct ook verwerken in de Azure hash.
+
+$logger->make_log("$FindBin::Bin/$FindBin::Script Magister vergelijken met Azure.");
 while (my ($magisternaam, $magisterteam) = each( %$Magister)){
     #say $naam;
     #print Dumper $magisterteam;
 
-    # Een magister team moet een docent en leerlingen hebben
-    if ( ! $magisterteam->{'docenten'} ||  ! $magisterteam->{'leerlingen'} ){
+    # Een magister team moet leerlingen hebben
+    # Een team heeft altijd tenminste 1 docent, anders staat hij niet in de db
+    if ( ! $magisterteam->{'leerlingen'} ){
         # Dit team heeft geen leerlingen
         # Zou dus niet mogen bestaan in Azure
         if ($Azure->{$magisternaam}){
-            # Geen leerlingen of docent, maar er is wel een Azure team
+            # Geen leerlingen, maar er is wel een Azure team
             # Hier iets doen met Azure
-            push (@{$ToDo->{'Archiveren'}}, $magisternaam)
+            push (@{$ToDo->{'Magister'}->{'Archiveren'}}, $magisternaam);
+            # Een team wat gearchiveerd moet worden hoeft niet meer beoordeeld te worden vanuit Azure
+            delete($Azure->{$magisternaam});
         # }else{
         #     # Hier niets doen
-        #     say "Team $magisternaam heeft geen leerlingen bestaat niet in Azure";
+        #     say "Team $magisternaam heeft geen leerlingen en bestaat niet in Azure";
         }
     }else{
         # Dit team heeft leerlingen
@@ -131,32 +139,75 @@ while (my ($magisternaam, $magisterteam) = each( %$Magister)){
         if (! $Azure->{$magisternaam}){
             # Azure team bestaat niet
             # Hier iets doen met Azure
-            push (@{$ToDo->{'Maken'}}, $magisternaam)
+            push (@{$ToDo->{'Magister'}->{'MagisterMaken'}}, $magisternaam)
+            # Team staat niet in de Azure hash, wordt dus van daar uit niet gecontroleerd. Zo laten.
         }else{
             # Azure bestaat 
             # Eigenaren en leden controleren
             # Eigenaren
             foreach my $magister_upn (keys %{$magisterteam->{'docenten'}}){
                 if (! $Azure->{$magisternaam}->{'docenten'}->{$magister_upn}){
-                    push(@{$ToDo->{'DocentToevoegen'}->{$magisternaam}}, $magister_upn);
+                    push(@{$ToDo->{'Magister'}->{'MagisterDocentToevoegen'}->{$magisternaam}}, $magister_upn);
+                    # Dit heeft impact op de controlle vanuit Azure, deze docent dus ook toevoegen aan de Azure hash
+                    $Azure->{$magisternaam}->{'docenten'}->{$magister_upn} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                 }
             }
             # Leerlingen
             foreach my $magister_upn (keys %{$magisterteam->{'leerlingen'}}){
                 if (! $Azure->{$magisternaam}->{'leerlingen'}->{$magister_upn}){
-                    push(@{$ToDo->{'LeerlingToevoegen'}->{$magisternaam}}, $magister_upn);
+                    push(@{$ToDo->{'Magister'}->{'MagisterLeerlingToevoegen'}->{$magisternaam}}, $magister_upn);
+                    # Dit heeft impact op de controlle vanuit Azure, deze leerling dus ook toevoegen aan de Azure hash
+                    $Azure->{$magisternaam}->{'leerlingen'}->{$magister_upn} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                 }
             }
         }
     }
 
 }
-
-print Dumper $ToDo;
-
 $logger->make_log("$FindBin::Bin/$FindBin::Script Magister vergelijken klaar.");
 
+# Vergelijk Azure met Magister
+#
+# Vanuit Azure gezien worden er alleen archiveringen en verwijderingen gedaan.
+# Magister is leidend. Tijdens de vergelijking vanuit Magister zijn de toevoegingen al gedaan.
+#
+$logger->make_log("$FindBin::Bin/$FindBin::Script Starten Azure vergelijking.");
+while (my ($azurenaam, $azureteam) = each( %$Azure)){
+    # Is het een team zonder eigenaar of leerlingen?
+    if (! $azureteam->{'docenten'} || ! $azureteam->{'leerlingen'}){
+        #say "$azurenaam heeft geen eigenaar of leden";
+        #print Dumper $azureteam;
+        push (@{$ToDo->{'Azure'}->{'AzureArchiverenLeden'}}, $azurenaam)
+    }else{
+        # Het is een geldig team met eigenaar en leden
+        # Is het ook aktief in Magister?
+        if (!$Magister->{$azurenaam}){
+            # Het team komt niet voor in Magister => archiveren
+            push (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}, $azurenaam)
+        }else{
+            # Geldig Azure team en staat ook in de Magister hash
+            # Eigenaren en leden controleren dus. 
+            # Toevoegen gebeurt al vanuit Magister, alleen verwijderen dus
+            # Eigenaren
+            foreach my $azure_upn (keys %{$azureteam->{'docenten'}}){
+                if (! $Magister->{$azurenaam}->{'docenten'}->{$azure_upn}){
+                    push(@{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}->{$azurenaam}}, $azure_upn);
+                }
+            }
+            # Leerlingen
+            foreach my $azure_upn (keys %{$azureteam->{'leerlingen'}}){
+                if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_upn}){
+                    push(@{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}->{$azurenaam}}, $azure_upn);
+                }
+            }
 
+        }
+    }
+}
+$logger->make_log("$FindBin::Bin/$FindBin::Script Einde Azure vergelijking.");
+
+#print Dumper $ToDo;
+p $ToDo;
 
 $logger->make_log("$FindBin::Bin/$FindBin::Script Beeindigd.");
 

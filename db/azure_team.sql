@@ -9,6 +9,4 @@ Left Join azuredocrooster       On azuredocrooster.azureteam_id = azureteam.ROWI
 Left Join azuredocent           On azuredocrooster.azuredocent_id = azuredocent.ROWID
 Left Join azureleerlingrooster   On azureleerlingrooster.azureteam_id = azureteam.ROWID
 Left Join azureleerling         On azureleerlingrooster.azureleerling_id = azureleerling.ROWID
--- Where azureteam.description = '2324-9k4b.men2'
-Where 
-;
+Where azureteam.description = '2324-9k4b.men2'

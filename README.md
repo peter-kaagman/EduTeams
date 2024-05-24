@@ -37,6 +37,26 @@ Volgens de documentatie is het zondermeer mogelijk om team (met een edu sjabloon
 - Kunnen ze assignment bevatten?
 - Hebben ze een edu OneNote?
 - Moeten deze teams ook geactiveerd worden?
+### Procedure
+Bron: https://learn.microsoft.com/en-us/graph/teams-create-group-and-team
+- Maak een group (incl leden en owners)
+- Eventueel "add owners", met pauze van 1 seconde (https://learn.microsoft.com/en-us/graph/api/group-post-owners)
+- Eventueel "add member", met pauze van 1 seconde (https://learn.microsoft.com/en-us/graph/api/group-post-members)
+- Group aanmaak kan 15 minuten duren, volgende stappen moeten dus wachten hierop.
+- Maak er een team van met create team from group", (https://learn.microsoft.com/en-us/graph/api/team-post#example-4-create-a-team-from-group)
+
+#### Bedenkingen
+##### Add owner/member
+Vereist een 1 seconde pauze tussen akties. De backend sync met teams kan 24uur duren en wordt pas getriggered indien 1 van de de leden of eigenaren online is in de Teams desktop app (niet de mobiele app).
+##### Create team from group
+Dit kan kan pas nadat de group aangemaakt is en kan 15 minuten duren. Zou de volgende methode werken?:
+- Create group
+- Entry maken in een separate tabel
+- Separaat process wat deze tabel verwerkt en "create team from group" uitvoert
+- Dit process periodiek uitvoeren.
+
+Example 2 op de pagina https://learn.microsoft.com/en-us/graph/api/group-post-groups?view=graph-rest-1.0&tabs=http is een voorbeeld hoe een group met eigenaren en leden gemaakt wordt. Om eigenaren en leden toe te kunnen voegen is de ID van de gebruiker vereist. De UPN volstaat niet. 
+
 ## De scripts  
 ### Magister.pm (een module met generieke functies)
 De SDS implementatie die ik gevonden heb van een school in Castricum maakt CSV bestanden voor SDS vanuit een download van standaard datasets voor aktieve docenten en leerlingen. Deze implementaite werkt volledig in Powershell. Aangezien ik niet echt "handig" ben met Powershell zal mijn implementatie met Perl geschreven worden. Via deze methode worden een tweetal CSV/XML bestanden gedownload. In deze bestanden staan de aktieve leerlingen en docenten, per leerling of docent de klassen/kluster die zij volgen danwel geven.

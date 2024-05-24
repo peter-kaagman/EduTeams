@@ -107,7 +107,7 @@ sub callAPI { # {{{1
 	my $verb = shift;					# Get the method form the function call
 	my $try = shift || 1;
 	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'timeout' => '5',
+		'timeout' => '180',
 	);
 	# Create the header
 	my @header =	[
