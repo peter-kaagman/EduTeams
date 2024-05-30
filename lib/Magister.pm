@@ -98,11 +98,17 @@ sub callAPI { # {{{1
 	return $result;
 } # }}}
 
-#https://[url]/?library=ADFuncties&function=GetActiveEmpoyees&SessionToken=[SessionToken] &Type=[HTML/XML/CSV/TAB]
+#https://[url]/?library=ADFuncties&function=GetActiveEmpoyees&SessionToken=[SessionToken] &Type=[HTML/XML/CSV/TAB] <= niet langer in gebruik
+#
+# GetActiveEmpoyees (staat daar nu echt een tikfout in?) is niet geschikt voor het ophalen van docenten. Hierin ontbreekt informatie om een koppeling met Azure te kunnen maken.
+# In plaats daarvan wordt gebruik gemaakt van een query "SDS-Medewerker". Hierin staat het werk email adres wat gebruikt kan worden als UPN.
+#
+#https://[url]/?library=Data&function=GetData&SessionToken=[SessionToken]&Layout=[Layout]&Parameters=[Parameters] &Type=[HTML/XML/CSV/TAB]
 sub getDocenten {
 	my $self = shift;
 	my $url = $self->_get_endpoint;
-	$url .= "/?library=ADFuncties&function=GetActiveEmpoyees&Type=CSV&SessionToken=".$self->_get_access_token;
+	#$url .= "/?library=ADFuncties&function=GetActiveEmpoyees&Type=CSV&SessionToken=".$self->_get_access_token;
+	$url .= "/?library=Data&function=GetData&Layout=SDS-Medewerker&Type=CSV&SessionToken=".$self->_get_access_token;
 	my $result = callAPI($url);
 	my $docenten = csv(
 		in => \$result->content,
@@ -113,10 +119,8 @@ sub getDocenten {
 	my $reply;
 	foreach my $docent (@$docenten){
 		#print Dumper $docent;
-		$reply->{$docent->{"\x{feff}stamnr_str"}}->{'naam'} 		= $docent->{'Loginaccount.Volledige_naam'};
-		$reply->{$docent->{"\x{feff}stamnr_str"}}->{'inlogcode'} 	= lc($docent->{'Code'});
-		$reply->{$docent->{"\x{feff}stamnr_str"}}->{'locatie'}		= $docent->{'Administratieve_eenheid.Omschrijving'};
-		$reply->{$docent->{"\x{feff}stamnr_str"}}->{'rol'} 			= $docent->{'Functie.Omschr'};
+		$reply->{$docent->{"\x{feff}Stamnr"}}->{'naam'} 		= $docent->{'Volledige_naam'};
+		$reply->{$docent->{"\x{feff}Stamnr"}}->{'upn'} 			= $docent->{'Email_werk'};
 	};	
 	return $reply;
 }

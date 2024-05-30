@@ -20,7 +20,8 @@ sub do_fetch { # {{{1
 	my $user_info = shift;
 	my $result = $self->callAPI($url, 'GET');
 	if ($result->is_success){
-	my $reply =  decode_json($result->decoded_content);
+		my $reply =  decode_json($result->decoded_content);
+		print Dumper $reply;
         foreach my $key (keys %{$reply->{'value'}[0]}){
             $$user_info{$key} = $reply->{'value'}[0]{$key};
         }
@@ -30,20 +31,20 @@ sub do_fetch { # {{{1
 	}
 } #	}}}
 
-sub fetch_upn_by_samAccountName { #	{{{1
+sub fetch_id_by_upn { #	{{{1
 	my $self = shift;
-	my $user = shift;
-
-	# ConsistencyLevel is required for filtering on samAccountName
-	$self->_set_consistencylevel("eventual"); 
+	my $upn = shift;
 	my %user_info;
-	my $url = $self->_get_graph_endpoint . "/v1.0/users";
-	$url .= "?\$filter=onPremisesSamAccountName eq '".$user."'&\$count=true";
-	do_fetch($self,$url, \%user_info);
-	# Reset ConsistencyLevel
-	$self->_set_consistencylevel(""); 
-	return  $user_info{'userPrincipalName'};
-	
+	my $url = $self->_get_graph_endpoint . "/v1.0/users/$upn". '?$select=id';
+	#say "Fetching id for $url";
+	my $result = $self->callAPI($url, 'GET');
+	if ($result->is_success){
+		my $content = decode_json($result->{'_content'});
+		return $content->{'id'};
+	}else{
+		#print Dumper $result;
+		return 'onbekend';
+	}
 }#	}}}
 
 __PACKAGE__->meta->make_immutable;

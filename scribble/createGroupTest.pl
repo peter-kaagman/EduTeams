@@ -10,6 +10,7 @@ use Data::Dumper;
 use Config::Simple;
 use DBI;
 use FindBin;
+use JSON;
 use lib "$FindBin::Bin/lib";
 
 use MsGroups;
@@ -19,7 +20,7 @@ use MsGroup;
 #
 # Test config
 my %config;
-Config::Simple->import_from("$FindBin::Bin/EduTeamsTest.cfg",\%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/config/EduTeamsTest.cfg",\%config) or die("No config: $!");
 
 # my $logger = Logger->new(
 #     'filename' => "$FindBin::Bin/Log/EduTeamsTest.log",
@@ -109,30 +110,66 @@ my $users = {
     },
 };
 
+my $naam = "test_ 1"; # Om ff snel een nieuwe groep te kunnen maken
+#
+# Bij het aanmaken van een groep kunnen maximaal 20 gebruikers toegevoegd 
+# worden. Oplossing hiervoor zou JSON batching kunnen zijn.
+# Echter ook JSON batching heeft weer een uitdaging: max 20 request
+# Een combinatie van members in de aanmaak request en de rest in de 
+# batch lijkt een mogelijkheid
+# Echter dit is voor jaarlaag groepen nog altijd te kort.
+# De transitie naar team zal in een separaat process plaatsvinden
+# ivm de 15 minuten wachttijd voor dit kan.
+# Dit process zal dan ook de leden van de group toe gaan voegen voor
+# de transitie naar een team.
+
 # Data structure om een groep te maken
 my $new_group = {
-    "description" => "My first group description",
-    "displayName" => "My first group displayName",
-    "mailEnabled" => \1,
-    "mailNickName" => "Section_MyFirstGroup",
-    "securityEnabled" => \0
+        "description" => "My $naam group description",
+        "displayName" => "My $naam group displayName",
+        "mailEnabled" => \1,
+        "mailNickName" => "Section_$naam",
+        "securityEnabled" => \0,
 };
 # add the groupType array
 push(@{$new_group->{'groupTypes'}}, 'Unified');
-#
-# Maximaal 20 owners en leden (dat is voor klassen te kort)
-#
 # add the owners
-push(@{$new_group->{'owners@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'docent1@ict-atlascollege.nl'}->{'id'});
-# een owner moet ook member zijn
-push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'docent1@ict-atlascollege.nl'}->{'id'});
+my @owners; # ff een array met 2 owners
+push(@owners, 'docent1@ict-atlascollege.nl');
+push(@owners, 'docent2@ict-atlascollege.nl');
+# Zodat we in een loop de owner kunnen toevoegen
+foreach my $owner (@owners){
+    push(@{$new_group->{'owners@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{$owner}->{'id'});
+    # een owner moet ook member zijn
+    push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{$owner}->{'id'});
+}
 # en de gewone leden toevoegen
-push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling1@ict-atlascollege.nl'}->{'id'});
-push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling2@ict-atlascollege.nl'}->{'id'});
-push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling3@ict-atlascollege.nl'}->{'id'});
+# push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling2@ict-atlascollege.nl'}->{'id'});
+# push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling3@ict-atlascollege.nl'}->{'id'});
+# push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling4@ict-atlascollege.nl'}->{'id'});
 
 my $result = $groups_object->create_group($new_group);
-print Dumper $result;
+if ($result->is_success){
+    my $created_team = decode_json($result->{'_content'});
+    say "ID: $created_team->{'id'}";
+    say "TimeStamp: $created_team->{'createdDateTime'}";
+    # De group bestaat. Nu leden toegvoegen? Testen!
+    # ff een array met users
+    
+    # Gegevens in de database opnemen om gebruikers toevoegen 
+    # en de team transitie
+
+} else {
+    #foutafhandeling
+    if ($result->{'_rc'} eq '400'){ # bad request
+        my $content = decode_json($result->{'_content'});
+        say $content->{'error'}->{'message'};
+    }else{
+        say "Er is een fout opgetreden: $result->{'_rc'}";
+    }
+}
+# Benieuwd of de group direct zichtbaar is
+#listGroups;
 
 # created group _content
 # {

@@ -16,7 +16,7 @@ use Logger;
 
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/EduTeams.cfg",\%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/config/EduTeamsTest.cfg",\%config) or die("No config: $!");
 
 my $logger = Logger->new(
     'filename' => "$FindBin::Bin/Log/EduTeams.log",
@@ -131,8 +131,8 @@ if ($groups_object->_get_access_token){
         # Normalize description, in sommige gevallen staat de LOC ervoor
         # Dit voorkomt ook dat ik kan filteren op description
         $group->{'description'} =~ s/.+\w\w\w\s(.+)/$1/;
-        # Alleen het huidige studiejaar
-        if ($group->{'description'} =~ /^$config{'STUDIE_JAAR'}/){
+        # Alleen de huidige lesperiode
+        if ($group->{'description'} =~ /^$config{'MAGISTER_LESPERIODE'}/){
             $logger->make_log("$FindBin::Bin/$FindBin::Script Team gevonden: ". $group->{description});
             my $azureteamROWID = getAzureTeamROWID($group);
             # Object maken voor deze groep met het doel owers en leden op te halen

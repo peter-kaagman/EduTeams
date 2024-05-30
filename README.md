@@ -103,7 +103,7 @@ https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0
 description	String	An optional description for the group.
 Returned by default. Supports $filter (eq, ne, not, ge, le, startsWith) and $search.
 
-Ik zou een extra filter op description startsWith studiejaar kunnen gebruiken
+Ik zou een extra filter op description startsWith lesperiode kunnen gebruiken
 Echter in sommige gevallen (waarom weet ik niet) begint de description met de locatie (OSG)
 Beter achteraf filteren dus
 

@@ -24,7 +24,7 @@ my $logger = Logger->new(
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/EduTeams.cfg", \%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/config/EduTeams.cfg", \%config) or die("No config: $!");
 #print Dumper \%config; exit 0;
 
 my $driver = $config{'DB_DRIVER'};
@@ -61,7 +61,7 @@ my $TeamsHoH; # ipv zoeken in de database
 
 # docent
 $dbh->do('Delete From magisterdocent'); # Truncate the table
-$qry = "Insert Into magisterdocent (stamnr, inlogcode, upn, naam) values (?,?,?,?) ";
+$qry = "Insert Into magisterdocent (stamnr, upn, naam, azureid) values (?,?,?,?) ";
 my $sth_magisterdocent = $dbh->prepare($qry);
 my $DocentenHoH; # ipv zoeken in de database
 
@@ -88,20 +88,15 @@ my $user_object = MsUser->new(
     'graph_endpoint' => $config{'GRAPH_ENDPOINT'},        
 );
 
-# Functie om een UPN te zoeken bij een NT inlogcode.
-# In Magister staat de UPN niet.
-sub getUPN {
-    my $inlogcode = shift;
+# Functie om een ID te zoeken met een UPN.
+# De inlogcode is alleen bruikbaar indien er nog een AD is
+sub getAzureId {
+    my $upn = shift;
     if ($user_object->_get_access_token){
-        my $result = $user_object->fetch_upn_by_samAccountName($inlogcode);
-        #print Dumper $result;
-        if ($result){
-        return lc($result);
-        }else{
-            return "onbekend";
-        }
+        my $AzureId = $user_object->fetch_id_by_upn($upn);
+        return $AzureId;
     }else{
-        return "Fout bij ophalen UPN: geen access token";
+        return "Fout bij ophalen AzureId: geen access token";
     }
 }
 
@@ -111,15 +106,20 @@ sub getUPN {
 sub getMagisterDocentROWID {
     my $stamnr = shift;
     my $docent = shift;
+    #say "Op zoek naar een ROWID voor $stamnr";
     if ($DocentenHoH->{$stamnr}){
         return $DocentenHoH->{$stamnr};
     }else{
-        my $upn = getUPN(lc($docent->{'inlogcode'}));
-        # $qry = "Insert Into magisterdocent (stamnr, inlogcode, upn, naam) values (?,?,?,?) ";
-        $sth_magisterdocent->execute($stamnr, lc($docent->{'inlogcode'}),$upn,$docent->{'naam'});
-        my $ROWID =  $dbh->last_insert_id("","","magisterdocent","ROWID");
-        $DocentenHoH->{$stamnr} = $ROWID;
-        return $ROWID; 
+        my $azureid = getAzureId(lc($docent->{'upn'}));
+        if ($azureid ne 'onbekend'){
+            # $qry = "Insert Into magisterdocent (stamnr, upn, naam, azureid) values (?,?,?,?) ";
+            $sth_magisterdocent->execute($stamnr, ,$docent->{'upn'},$docent->{'naam'},$azureid);
+            my $ROWID =  $dbh->last_insert_id("","","magisterdocent","ROWID");
+            $DocentenHoH->{$stamnr} = $ROWID;
+            return $ROWID; 
+        }else{
+            return 'onbekend';
+        }
     }
 }
 
@@ -154,7 +154,7 @@ sub getMagisterTeamROWID {
     }else{
         # Team niet gevonden => aanmaken
         # $qry = "Insert Into magisterteam (naam, type) values (?,?) ";
-        $sth_magisterteam->execute($groep, "groepvak");
+        $sth_magisterteam->execute($groep, $type);
         my $ROWID =  $dbh->last_insert_id("","","magisterteam","ROWID");
         $TeamsHoH->{$groep} = $ROWID;
         return $ROWID;
@@ -174,23 +174,29 @@ sub Docenten {
                 # ROWID ophalen voor de docent
                 # Hier pas docent aanmaken, alleen als hij een aktieve groep lesgeeft
                 my $docentROWID = getMagisterDocentROWID($stamnr, $docent);
-                # Prefix groep met studiejaar uit conifg
-                my $groep_formatted = $config{'STUDIE_JAAR'}.'-'.$groep; # $groep niet aanpassen, dat is de index van de hash
-                # Groepen met een punt in de naam zijn clustergroepen
-                # Zonder punt zijn klassengroepen, hier moet nog "-vak" aan toegevoegd worden.
-                # anders zijn ze niet uniek.
-                my $type = "clustergroep"; # Uitgaan van clustergroep
-                if ( $groep !~ /\./ ){
-                    #print Dumper $groepen->{$groep};
-                    $type = "klasgroep"; # wijzigen indien van toepassing
-                    $groep_formatted = $groep_formatted."-".$groepen->{$groep}->{'code'};
+                # Niets maken als de ROWID onbekend is, dit duid op een ongeldige UPN in Magister
+                if ($docentROWID ne 'onbekend'){
+                    # Prefix groep met lesperiode uit conifg
+                    my $groep_formatted = $config{'MAGISTER_LESPERIODE'}.'-'.$groep; # $groep niet aanpassen, dat is de index van de hash
+                    # Groepen met een punt in de naam zijn clustergroepen
+                    # Zonder punt zijn klassengroepen, hier moet nog "-vak" aan toegevoegd worden.
+                    # anders zijn ze niet uniek.
+                    my $type = "clustergroep"; # Uitgaan van clustergroep
+                    if ( $groep !~ /\./ ){
+                        #print Dumper $groepen->{$groep};
+                        $type = "klasgroep"; # wijzigen indien van toepassing
+                        $groep_formatted = $groep_formatted."-".$groepen->{$groep}->{'code'};
+                    }
+                    # ROWID ophalen voor de groep
+                    my $teamROWID = getMagisterTeamROWID($groep_formatted,$type);
+                    # Beide ROWIDs zijn nu bekend => roosterentry maken
+                    #my $qry = "Insert Into magisterdocentenrooster (docid,teamid) values (?,?) ";
+                    $sth_magisterdocentenrooster->execute($docentROWID,$teamROWID);
+                    $logger->make_log("$FindBin::Bin/$FindBin::Script Docent => $docent->{'naam'} => $groep_formatted");
+                }else{
+                    $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR Docent => $docent->{'naam'} heeft een ongeldige UPN in Magister");
+
                 }
-                # ROWID ophalen voor de groep
-                my $teamROWID = getMagisterTeamROWID($groep_formatted,$type);
-                # Beide ROWIDs zijn nu bekend => roosterentry maken
-                #my $qry = "Insert Into magisterdocentenrooster (docid,teamid) values (?,?) ";
-                $sth_magisterdocentenrooster->execute($docentROWID,$teamROWID);
-                $logger->make_log("$FindBin::Bin/$FindBin::Script Docent => $docent->{'naam'} => $groep_formatted");
             }
         }
     }
@@ -212,8 +218,8 @@ sub Leerlingen {
                 #say "Groep is: $groep";
                 # Alleen doorgaan als de groep in $TeamsHoH staat en er dus een docent voor is
                 # Hievoor is de formatted groep naam nodig
-                # <studiejaar>-<groepnaam>
-                my $groep_formatted = $config{'STUDIE_JAAR'}.'-'.$groep; # $groep niet aanpassen, dat is de index van de hash
+                # <lesperiode>-<groepnaam>
+                my $groep_formatted = $config{'MAGISTER_LESPERIODE'}.'-'.$groep; # $groep niet aanpassen, dat is de index van de hash
                 #say "Formatted: $groep_formatted";
                 if($TeamsHoH->{$groep_formatted}){
                     # Er is een ROWID voor het team, nu de ROWID voor de leerling ophalen
@@ -233,8 +239,8 @@ sub Leerlingen {
                 #say "Vakcode is: $vakcode";
                 # Alleen doorgaan als vak in $TeamsHoH staat en er dus een docent voor is
                 # Hievoor is de formatted vak naam nodig
-                # <studiejaar>-<klas>-<vakcode>
-                my $vaknaam_formatted = $config{'STUDIE_JAAR'}.'-'.$leerling->{'klas'}."-".$vakcode; # $vakcode niet aanpassen, dat is de index van de hash
+                # <lesperiode>-<klas>-<vakcode>
+                my $vaknaam_formatted = $config{'MAGISTER_LESPERIODE'}.'-'.$leerling->{'klas'}."-".$vakcode; # $vakcode niet aanpassen, dat is de index van de hash
                 #say "Formatted: $vaknaam_formatted";
                 if($TeamsHoH->{$vaknaam_formatted}){
                     # Er is een ROWID voor het team, nu de ROWID voor de leerling ophalen
@@ -250,8 +256,73 @@ sub Leerlingen {
     }
 }
 
+# Een jaarlaag wordt gebasseerd op geldige groepen in Magister.
+# Dwz dat de groepen docenten en leerlingen moeten hebben.
+# Van een groep zonder leerlingen worden de lln dus niet toegevoegd
+my $jaarlagen = {
+    '0M4%men' => '0M4-mentor',
+    '0H4%men' => '0H4-mentor',
+    '0H5%men' => '0H5-mentor',
+    '0V6%men' => '0V6-mentor',
+    '2MH1%men' => 'CSG-MH1',
+    '2HV1%men' => 'CSG-HV1',
+    '2V1%men' => 'CSG-V1',
+    '2MH2%men' => 'CSG-MH2',
+    '2HV2%men' => 'CSG-HV2',
+    '2V2%men' => 'CSG-V2',
+    '2M3%men' => 'CSG-M3',
+    '2H3%men' => 'CSG-H3',
+    '2HV3%men' => 'CSG-HV3',
+    '2V3%men' => 'CSG-V3',
+    '2M4%men' => 'CSG-M4',
+    '2H4%men' => 'CSG-H4',
+    '2V4%men' => 'CSG-V4',
+    '2H5%men' => 'CSG-H5',
+    '2V5%men' => 'CSG-V5',
+    '2V6%men' => 'CSG-V6',
+};
+
+sub jaarLagen {
+    $logger->make_log("$FindBin::Bin/$FindBin::Script Jaarlagen maken gestart");                    
+    my $sth_docentenzoeken = $dbh->prepare("Select docentid From magisterdocentenrooster Where teamid = ?");      # docenten zoeken van een team
+    my $sth_leerlingenzoeken = $dbh->prepare("Select leerlingid From magisterleerlingenrooster Where teamid = ?");# leerlingen zoeken van een team
+    my $sth = $dbh->prepare('Select * From magisterteam Where naam Like ?');    # zoek een team op naam
+    
+    # De hash jaarlagen doorlopen
+    while (my($search,$jaarlaag_naam) = each (%{$jaarlagen})){
+        # Zoek de teams die aan het filter voldoen (lesperiode toevoegen)
+        $sth->execute($config{'MAGISTER_LESPERIODE'}.'-'.$search);
+        my $teams = $sth->fetchall_hashref('naam'); # gevonden teams ff in een hash zetten
+        # doorloop de gevonden teams
+        while (my ($naam, $team) = each(%{$teams})){ 
+            # ROWID ophalen voor de jaarlaag, dit voegt hem zonodig toe aan de tabel
+            my $jaarlaag_rowid = getMagisterTeamROWID($config{'MAGISTER_LESPERIODE'}.'-'.$jaarlaag_naam, 'jaarlaag');
+            my $team_rowid = $TeamsHoH->{$naam}; # team rowid van het team waar de leden uit opgehaald moeten worden
+            # Docenten opvragen voor dit team uit het docentenrooster
+            $sth_docentenzoeken->execute($team_rowid);
+            while (my $row = $sth_docentenzoeken->fetchrow_hashref()){
+                # ROWID van de jaarlaag is bekend en de ROWID van de docent
+                #my $qry = "Insert Into magisterdocentenrooster (docentid,teamid) values (?,?) ";
+                $sth_magisterdocentenrooster->execute($row->{'docentid'},$jaarlaag_rowid);
+            }
+            # Leerlingen opvragen voor dit team uit het leerlingenrooster
+            $sth_leerlingenzoeken->execute($team_rowid);
+            while (my $row = $sth_leerlingenzoeken->fetchrow_hashref()){
+                # ROWID van de jaarlaag is bekend en de ROWID van de leerling
+                #my $qry = "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
+                $sth_magisterleerlingenrooster->execute($row->{'leerlingid'},$jaarlaag_rowid);
+            }
+            
+        }
+    }
+    $sth->finish;
+    $sth_docentenzoeken->finish;
+    $sth_leerlingenzoeken->finish;
+}
+
 &Docenten();
 &Leerlingen();
+&jaarLagen();
 
 $sth_magisterdocent->finish;
 $sth_magisterteam->finish;

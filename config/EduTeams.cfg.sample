@@ -1,0 +1,21 @@
+APP_NAME EduTeams
+TENANT_ID <tenant id>
+APP_ID <app id>
+APP_PASS <app pass>
+GRAPH_ENDPOINT https://graph.microsoft.com
+LOGIN_ENDPOINT https://login.microsoftonline.com
+
+MAGISTER_URL https://<schoolnaam>.swp.nl:8800/doc
+MAGISTER_USER <magister user>
+MAGISTER_SECRET <magister pass>
+MAGISTER_LESPERIODE 2324
+
+AKTIEVE_LOCATIES 0|2|8|9
+#AKTIEVE_LOCATIES 9
+JAARLAGEN jaarlagen.json
+
+
+DB_DRIVER SQLite
+DB_NAME eduteams.sqlite
+DB_USER ""
+DB_PASS ""
