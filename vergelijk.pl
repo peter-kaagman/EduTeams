@@ -10,7 +10,8 @@ use Data::Dumper;
 #use Data::Printer;
 use FindBin;
 use Config::Simple;
-use JSON qw(decode_json encode_json);
+use Time::Piece;
+use Time::Seconds;use JSON qw(decode_json encode_json);
 use lib "$FindBin::Bin/lib";
 
 use Logger; # Om te loggen
@@ -37,7 +38,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
     or die $DBI::errstr;
 
 # Handler om gemaakte groepen te kunnen vastleggen
-my $sth_groupcreated = $dbh->prepare('Insert Into groupcreated (\'id\',\'timestamp\',\'naam\',\'members\') values (?,?,?,?)');
+my $sth_class_created = $dbh->prepare('Insert Into groupcreated (\'id\',\'timestamp\',\'naam\',\'members\',\'owners\') values (?,?,?,?,?)');
 
 my ($Azure, $Magister, $ToDo); # Global hashes to store info
 
@@ -53,7 +54,7 @@ my $groups_object = MsGroups->new(
 );
 
 
-sub createAzureGroup {
+sub createAzureClass {
     my $name = shift;
     my $mailnick;
     # Jaarlagen krijgen een herkenbare mailnick
@@ -63,35 +64,34 @@ sub createAzureGroup {
         $mailnick = "Section_$name";
     }
     # Data structure om een groep te maken
-    my $new_group = {
-            "description" => $name,
-            "displayName" => $name,
-            "mailEnabled" => \1,
-            "mailNickName" => $mailnick,
-            "securityEnabled" => \0,
+    my $new_class = {
+        "description" => $name,
+        "displayName" => $name,
+        "mailNickName" => $mailnick,
+        "externalId" => "Section_firstClass",
+        "course" => {
+            "displayName" => "FirstClass",
+        },
     };
-    # add the groupType array
-    push(@{$new_group->{'groupTypes'}}, 'Unified');
-    # add the owners
-    while (my ($id,$naam) =  each(%{$Magister->{$name}->{'docenten'}})){
-        push(@{$new_group->{'owners@odata.bind'}}, "https://graph.microsoft.com/v1.0/users/$id");
-        # een owner moet ook member zijn
-        push(@{$new_group->{'members@odata.bind'}}, "https://graph.microsoft.com/v1.0/users/$id");
-    }
-    # Leden worden pas toegevoegd voor de transitie naar een team
+    # Leden en eignaren worden later toegevoegd
+    #print Dumper $new_class;
 
-    print Dumper $new_group;
-
-    my $result = $groups_object->create_group($new_group);
+    my $result = $groups_object->create_class($new_class);
     if ($result->is_success){
-        my $created_group = decode_json($result->{'_content'});
-        say "ID: $created_group->{'id'}";
-        say "TimeStamp: $created_group->{'createdDateTime'}";
+        my $created_class = decode_json($result->{'_content'});
+        #say "ID: $created_class->{'id'}";
+        my $now = localtime;
+        #say "TimeStamp: $now" ;
         # Gegevens in de database opnemen om gebruikers toevoegen 
         # en de team transitie
         # naam, leden nog toevoegen aan de database, dan hoeft dat niet nog een keer opgezocht te wordne
-        $sth_groupcreated->execute($created_group->{'id'},$created_group->{'createdDateTime'},$name, encode_json($Magister->{$name}->{'leerlingen'}));
-        $logger->make_log("$FindBin::Bin/$FindBin::Script Group $name gemaakt,  id is $created_group->{'id'}");
+        $sth_class_created->execute(
+            $created_class->{'id'},
+            $now->epoch,$name, 
+            encode_json($Magister->{$name}->{'leerlingen'}),
+            encode_json($Magister->{$name}->{'docenten'})
+            );
+        $logger->make_log("$FindBin::Bin/$FindBin::Script Class $name gemaakt,  id is $created_class->{'id'}");
     } else {
         #foutafhandeling
         if ($result->{'_rc'} eq '400'){ # bad request
@@ -111,7 +111,7 @@ sub AzureHash{
     my $qry = << "END_QRY";
     Select
         azureteam.*,
-        azuredocent.upn As 'docent_upn',
+        azuredocent.azureid As 'docent_azureid',
         azuredocent.naam As 'docent_naam',
         azureleerling.upn As 'leerling_upn',
         azureleerling.naam As 'leerling_naam'
@@ -127,7 +127,7 @@ END_QRY
         $Azure->{$row->{'description'}}->{'id'} = $row->{'id'};
         $Azure->{$row->{'description'}}->{'displayName'} = $row->{'displayName'};
         if ($row->{'docent_naam'}){
-            $Azure->{$row->{'description'}}->{'docenten'}->{$row->{'docent_upn'}} = $row->{'docent_naam'};
+            $Azure->{$row->{'description'}}->{'docenten'}->{$row->{'docent_azureid'}} = $row->{'docent_naam'};
         #}else{
         #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'description'}. " heeft geen docenten");
         }
@@ -286,18 +286,30 @@ sub AzureMagister{
 AzureHash(); # <= maak een hash van wat we weten vanuit Azure
 MagisterHash(); # <= maak een hash van wat we weten vanuit Magister
 MagisterAzure(); # Vergelijkt vanuit Magsiter gezien, koppelt terug in $ToDo maar wijzigt ook de AzureHash
-print Dumper $ToDo;
 AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
+say "ToDo";
+print Dumper $ToDo if $ToDo;
+# say "Azure";
+# print Dumper $Azure;
+# say "Magister";
+# print Dumper $Magister;
 
 # Magister
-# Archiveren
-# MagisterMaken
-foreach my $NewGroup (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
-    createAzureGroup($NewGroup);
+    # Archiveren
+    # MagisterMaken <= Een team staat in Magister maar niet in Azure
+foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
+    createAzureClass($NewClass);
 }
-# MagisterDocentToevoegen
-# MagisterLeerlingToevoegen
+    # MagisterDocentToevoegen
+    # MagisterLeerlingToevoegen
+
+# Azure
+    # AzureArchiverenNietInMagister <= Een team staat wel in Azure maar niet (meer) in Magister
+foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
+    $groups_object->archive_class($Team2Archive);
+}
+
 
 $logger->make_log("$FindBin::Bin/$FindBin::Script Beeindigd.");
 

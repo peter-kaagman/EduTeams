@@ -112,3 +112,12 @@ https://graph.microsoft.com/v1.0/groups/some_id/owners/?$select=id,displayName,u
 https://graph.microsoft.com/v1.0/groups/some_id/members/?$select=id,displayName,userPrincipalName
 halen de leden en eigenaren op
 NB Een eigenaar is ook een lid
+
+EducationTerm
+{
+  "@odata.type": "#microsoft.graph.educationTerm",
+  "displayName": "String",
+  "endDate": "Date",
+  "externalId": "String",
+  "startDate": "Date"
+}

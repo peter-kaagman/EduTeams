@@ -45,7 +45,7 @@ Create Table If Not Exists azureteam(
 -- dan komt hij tijdens het ophalen niet in deze tabel
 Create Table If Not Exists azuredocent(
     upn Text Not Null Unique,
-    auzreid Text,
+    azureid Text Not Null,
     naam Text Not Null
 );
 
@@ -77,6 +77,8 @@ Create Table If Not Exists groupcreated(
     naam Text Not NULL,
     timestamp Text Not Null,
     members Text Not Null,
-    members_added Text defaul '0'
+    members_added Text default '0',
+    owners Text Not Null,
+    owners_added Text default '0'
 );
 

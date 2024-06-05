@@ -92,22 +92,6 @@ my $users = {
         'id' => 'bb32a504-c67e-475d-9b47-3c6c8e49cf6f',
         'displayName' => 'Test Docent 2',
     },
-    'leerling1@ict-atlascollege.nl' => {
-        'id' => 'db8f7592-bb6f-4b6c-9d9a-a7b6184fac6e',
-        'displayName' => 'Test Leerling 1',
-    },
-    'leerling2@ict-atlascollege.nl' => {
-        'id' => '16886be3-8a11-4114-b535-12a0334a4ad8',
-        'displayName' => 'Test Leerling 2',
-    },
-    'leerling3@ict-atlascollege.nl' => {
-        'id' => '6991e4da-f259-4ef9-b263-8d7acde1a4b1',
-        'displayName' => 'Test Leerling 3',
-    },
-    'leerling4@ict-atlascollege.nl' => {
-        'id' => 'dd4726df-6f48-44ef-9f98-1c1b2f6eee43',
-        'displayName' => 'Test Leerling 4',
-    },
 };
 
 my $naam = "test_ 1"; # Om ff snel een nieuwe groep te kunnen maken

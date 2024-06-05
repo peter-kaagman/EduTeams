@@ -259,28 +259,9 @@ sub Leerlingen {
 # Een jaarlaag wordt gebasseerd op geldige groepen in Magister.
 # Dwz dat de groepen docenten en leerlingen moeten hebben.
 # Van een groep zonder leerlingen worden de lln dus niet toegevoegd
-my $jaarlagen = {
-    '0M4%men' => '0M4-mentor',
-    '0H4%men' => '0H4-mentor',
-    '0H5%men' => '0H5-mentor',
-    '0V6%men' => '0V6-mentor',
-    '2MH1%men' => 'CSG-MH1',
-    '2HV1%men' => 'CSG-HV1',
-    '2V1%men' => 'CSG-V1',
-    '2MH2%men' => 'CSG-MH2',
-    '2HV2%men' => 'CSG-HV2',
-    '2V2%men' => 'CSG-V2',
-    '2M3%men' => 'CSG-M3',
-    '2H3%men' => 'CSG-H3',
-    '2HV3%men' => 'CSG-HV3',
-    '2V3%men' => 'CSG-V3',
-    '2M4%men' => 'CSG-M4',
-    '2H4%men' => 'CSG-H4',
-    '2V4%men' => 'CSG-V4',
-    '2H5%men' => 'CSG-H5',
-    '2V5%men' => 'CSG-V5',
-    '2V6%men' => 'CSG-V6',
-};
+my $json = read_file("$FindBin::Bin/config/".$config{'JAARLAGEN'}, { binmode => ':raw'});
+my $jaarlagen = decode_json $json;
+print Dumper $jaarlagen;
 
 sub jaarLagen {
     $logger->make_log("$FindBin::Bin/$FindBin::Script Jaarlagen maken gestart");                    

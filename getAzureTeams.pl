@@ -36,7 +36,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 # Prepare db shit, volgorde is van belang ivm truncatesd en foreign keys
 # azuredocent
 $dbh->do('Delete From azuredocent'); # Truncate the table 
-my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
+my $qry = "Insert Into azuredocent (upn, azureid, naam) values (?,?,?) ";
 my $sth_azuredocent = $dbh->prepare($qry);
 my $AzureDocenten; # ipv zoeken in de database
 #$qry = "Select ROWID From azuredocent Where upn = ?";
@@ -85,11 +85,17 @@ sub getAzureDocentROWID {
         return $AzureDocenten->{$docent->{'userPrincipalName'}};
     }else{
         # Docent niet gevonden => aanmaken
+        #my $qry = "Insert Into azuredocent (upn, azureid, naam) values (?,?,?) ";
         #print Dumper $docent;
-        #my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
-        $sth_azuredocent->execute(lc($docent->{'userPrincipalName'}),$docent->{'displayName'});
+        $sth_azuredocent->execute(
+            lc($docent->{'userPrincipalName'}), 
+            $docent->{'id'}, 
+            $docent->{'displayName'}
+        );
         my $rowid =  $dbh->last_insert_id("","","azuredocent","ROWID");
         $AzureDocenten->{$docent->{'userPrincipalName'}} = $rowid;
+        #say $rowid;
+        #print Dumper $AzureDocenten;
         return $rowid;
     }
 }
@@ -123,7 +129,7 @@ sub getAzureTeamROWID {
 if ($groups_object->_get_access_token){
     # Eerst de groepen ophalen in Graph
 	my $groups = $groups_object->fetch_groups();
-    my (@retryOwner, @retryMember); # Groups without owners or members are retried
+    #my (@retryOwner, @retryMember); # Groups without owners or members are retried
 	my $count = scalar @$groups;
 	$logger->make_log("$FindBin::Bin/$FindBin::Script $count groupen opgehaald.");
 	while (my ($i, $group) = each @{$groups}){
@@ -148,11 +154,11 @@ if ($groups_object->_get_access_token){
             # Eigenaren (docenten ophalen)
             my $owners = $group_object->fetch_owners();
             # $owners is een AOH
-            # Store a group without owners for retry
-            if (! @$owners ){
-                push (@retryOwner, $group);
-                say "Geen members". $group->{'description'};
-            }
+            # # Store a group without owners for retry
+            # if (! @$owners ){
+            #     push (@retryOwner, $group);
+            #     say "Geen members". $group->{'description'};
+            # }
 
             foreach my $owner (@$owners){
                 $logger->make_log("$FindBin::Bin/$FindBin::Script Docent gevonden: ".$owner->{'displayName'});
@@ -177,17 +183,17 @@ if ($groups_object->_get_access_token){
             }
             # $count is the number of members excluding those who are allso owner
             #say $group->{'description'} .' heeft '. $count . 'leden'; 
-            if ( $count eq 0 ){
-                say "Geen members". $group->{'description'};
-                push (@retryMember, $group);
-            }
+            # if ( $count eq 0 ){
+            #     say "Geen members". $group->{'description'};
+            #     push (@retryMember, $group);
+            # }
 
         }
 	}
-    say "No Owner:";
-    print Dumper \@retryOwner;
-    say "No member:";
-    print Dumper \@retryMember;
+    # say "No Owner:";
+    # print Dumper \@retryOwner;
+    # say "No member:";
+    # print Dumper \@retryMember;
 }else{
 	$logger->make_log("$FindBin::Bin/$FindBin::Script No token!");
 }
