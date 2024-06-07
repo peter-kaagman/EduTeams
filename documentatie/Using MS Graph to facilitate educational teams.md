@@ -44,5 +44,13 @@ Of course you can work around this. You can add members In a loop, add them in b
 ## Using the teams methods
 
 Analog to the Groups API methods the Teams API gives you method to add users. An important difference is that users are added to the team with a role. That way you are able to add an owner in one single transaction. These methods also impose the 20 users limit per transaction. But read on…
-I guess the guys who programmed the recognized the fact that adding 20 users to a team is not a whole lot. Not sure as to the reason, but there is a method to batch add users. And that method can add up to 200 users in one transaction. This suffices for the majority of the teams I need to create. Only a fraction of the teams we facilitate will be larger than that.
-[conversationMember: add - Microsoft Graph v1.0 | Microsoft Learn](https://learn.microsoft.com/en-us/graph/api/conversationmembers-add?view=graph-rest-1.0&tabs=http)
+I guess the guys who programmed the recognized the fact that adding 20 users to a team is not a whole lot. Not sure as to the reason, but there is a method [add users in batch](https://learn.microsoft.com/en-us/graph/api/conversationmembers-add?view=graph-rest-1.0&tabs=http). And that method can add up to 200 users in one transaction. This suffices for the majority of the teams I need to create. Only a fraction of the teams we facilitate will be larger than that.
+
+## Conclusion: Propossed workflow
+
+To conclude I would like to propose the following method for creating educational teams:
+- Create a class using the educational Graph API
+- Wait 15 minutes for background processing.
+- [Add members](https://learn.microsoft.com/en-us/graph/api/conversationmembers-add?view=graph-rest-1.0&tabs=http) with roles using the Teams Graph API
+
+
