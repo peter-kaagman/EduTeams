@@ -25,7 +25,7 @@ Teams being specialized groups gives the possibility of using the more standard 
 The first thing to take into account is that an owners should also be a member of a team. When using the groups methods you must add an owner both as owner and member. Resulting in two separate transactions.
 Next there are the delays which are in effect:
 -	A member/owner added to a group will be visible as a team member/owner within the next 24 hours.
--	The member/owner is only added to the team if on of its members/owners has been active in Teams (not in the mobile app)
+-	The member/owner is only added to the team if on of its members/owners has been active in Teams (not in the mobile app).
 The thing that made me look further is the limits on members/owners which can be added per transaction:  20. In my organization 20 members/users would suffice for normal teams, but not for classes. Classes are almost always larger than 20 members/users. We  also facilitate cross section teams (teams in instance for all students of a certain course or grade level) which can easily have hundredth members or more.
 Of course you can work around this. You can add members In a loop, add them in batches of 20, you can even use batched JSON (which in fact also imposes a limit of 20 on the number of elements in the batch) to add them. But the result is a lot of transactions and complex coding.
 ## Using the teams methods
