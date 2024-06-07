@@ -99,31 +99,33 @@ sub addMember {
 		'@data.id' => "https://graph.microsoft.com/v1.0/directoryObjects/$member_id"
 	};
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups/".$self->_get_id.'/members/$ref';
-	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'timeout' => '180',
-	);
-	# Create the header
-	my $header =	[
-		'Accept'        => '*/*',
-		'Authorization' => "Bearer ".$self->_get_access_token,
-		'Content-Type'  => 'application/json',
-	];
-	my $data = encode_json($payload);
-	# Create the request
-	my $r  = HTTP::Request->new(
-		'POST',
-		$url,
-		$header,
-		$data,
-	);	
-	#print Dumper $r;
-	# Let the useragent make the request
-	my $result = $ua->request($r);
+	my $result = $self->callAPI($url,'POST', $payload);
 	print Dumper $result;
 	return $result;
-
 }
 
+sub removeMember {
+	my $self = shift;
+	my $member_id = shift;
+	my $payload = {	};
+	my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$self->_get_id.'/members/'.$member_id.'/$ref';
+	my $result = $self->callAPI($url, 'DELETE',$payload);
+	print Dumper $result;
+	return $result;
+}
+
+sub removeOwner {
+	my $self = shift;
+	my $owner_id = shift;
+	my $payload = {	};
+	my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$self->_get_id.'/owners/'.$owner_id.'/$ref';
+	my $result = $self->callAPI($url, 'DELETE',$payload);
+	# if ($result->is_success){
+	# 	#cascade to member
+	# 	$result = $self->removeMember($owner_id);
+	# }
+	return $result;
+}
 __PACKAGE__->meta->make_immutable;
 42;
 # vim: set foldmethod=marker

@@ -79,6 +79,7 @@ Create Table If Not Exists groupcreated(
     members Text Not Null,
     members_added Text default '0',
     owners Text Not Null,
-    owners_added Text default '0'
+    owners_added Text default '0',
+    general_checked Text defailt '0'
 );
 

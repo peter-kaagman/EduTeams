@@ -16,7 +16,7 @@ use lib "$FindBin::Bin/lib";
 
 use Logger; # Om te loggen
 use MsGroups;
-#use MsGroup;
+use MsGroup;
 
 
 my $logger = Logger->new(
@@ -40,7 +40,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 # Handler om gemaakte groepen te kunnen vastleggen
 my $sth_class_created = $dbh->prepare('Insert Into groupcreated (\'id\',\'timestamp\',\'naam\',\'members\',\'owners\') values (?,?,?,?,?)');
 
-my ($Azure, $Magister, $ToDo); # Global hashes to store info
+my ($Azure, $Magister, $LlnId, $ToDo); # Global hashes to store info
 
 # Deze maak ik global omdat ik maar 1x de verbinding wil maken
 my $groups_object = MsGroups->new(
@@ -114,6 +114,7 @@ sub AzureHash{
         azuredocent.azureid As 'docent_azureid',
         azuredocent.naam As 'docent_naam',
         azureleerling.upn As 'leerling_upn',
+        azureleerling.azureid As 'leerling_azureid',
         azureleerling.naam As 'leerling_naam'
     From azureteam
     Left Join azuredocrooster       On azuredocrooster.azureteam_id = azureteam.ROWID
@@ -133,6 +134,8 @@ END_QRY
         }
         if ($row->{'leerling_naam'}){
             $Azure->{$row->{'description'}}->{'leerlingen'}->{$row->{'leerling_upn'}} = $row->{'leerling_naam'};
+            # Leerling id in een hash stoppen met upn als index, scheelt een hoop requests
+            $LlnId->{$row->{'leerling_upn'}} = $row->{'leerling_azureid'};
         #}else{
         #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'description'}. " heeft geen leerlingen");
         }
@@ -265,15 +268,17 @@ sub AzureMagister{
                 # Eigenaren en leden controleren dus. 
                 # Toevoegen gebeurt al vanuit Magister, alleen verwijderen dus
                 # Eigenaren
-                foreach my $azure_upn (keys %{$azureteam->{'docenten'}}){
-                    if (! $Magister->{$azurenaam}->{'docenten'}->{$azure_upn}){
-                        push(@{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}->{$azurenaam}}, $azure_upn);
+                foreach my $azure_id (keys %{$azureteam->{'docenten'}}){
+                    if (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id}){
+                        push(@{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}->{$Azure->{$azurenaam}->{'id'}}}, $azure_id);
                     }
                 }
                 # Leerlingen
+                print Dumper $azureteam->{'leerlingen'};
                 foreach my $azure_upn (keys %{$azureteam->{'leerlingen'}}){
                     if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_upn}){
-                        push(@{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}->{$azurenaam}}, $azure_upn);
+                        say "LLn verwijderen uit $azurenaam => $azure_upn";
+                        push(@{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}->{$Azure->{$azurenaam}->{'id'}}}, $azure_upn);
                     }
                 }
 
@@ -284,7 +289,9 @@ sub AzureMagister{
 }
 
 AzureHash(); # <= maak een hash van wat we weten vanuit Azure
+#print Dumper $Azure;
 MagisterHash(); # <= maak een hash van wat we weten vanuit Magister
+#print Dumper $Magister;
 MagisterAzure(); # Vergelijkt vanuit Magsiter gezien, koppelt terug in $ToDo maar wijzigt ook de AzureHash
 AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
@@ -307,8 +314,45 @@ foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
 # Azure
     # AzureArchiverenNietInMagister <= Een team staat wel in Azure maar niet (meer) in Magister
 foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
-    $groups_object->archive_class($Team2Archive);
+    # Om te archiveren is alleen het team id nodig
+    $groups_object->archive_class(
+        $Azure->{$Team2Archive}->{'id'},
+        $Team2Archive
+    );
 }
+    # AzureLeerlingVerwijderen
+while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
+    say "Lln verwijderen uit: $id";
+    my $group_object = MsGroup->new(
+        'app_id'        => $config{'APP_ID'},
+        'app_secret'    => $config{'APP_PASS'},
+        'tenant_id'     => $config{'TENANT_ID'},
+        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+        'select'        => '$select=id,displayName,userPrincipalName',
+        'id'            => $id,
+    );
+    foreach my $lln_upn  (@{$array}){
+        say "LLN id $lln_upn => $LlnId->{$lln_upn}";
+        $group_object->removeMember($LlnId->{$lln_upn})
+    }
+}  
+    # AzureDocentVerwijderen
+while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
+    say "Docent verwijderen uit: $id";
+    my $group_object = MsGroup->new(
+        'app_id'        => $config{'APP_ID'},
+        'app_secret'    => $config{'APP_PASS'},
+        'tenant_id'     => $config{'TENANT_ID'},
+        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+        'select'        => '$select=id,displayName,userPrincipalName',
+        'id'            => $id,
+    );
+    foreach my $docent_id  (@{$array}){
+        $group_object->removeMember($docent_id)
+    }
+}  
 
 
 $logger->make_log("$FindBin::Bin/$FindBin::Script Beeindigd.");

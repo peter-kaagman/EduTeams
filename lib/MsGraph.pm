@@ -105,25 +105,42 @@ sub callAPI { # {{{1
 	my $self = shift;					# Get a refence to the object itself
 	my $url = shift;					# Get the URL from the function call
 	my $verb = shift;					# Get the method form the function call
-	my $try = shift || 1;
+	my $payload = shift;
 	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
 		'timeout' => '180',
 	);
 	# Create the header
-	my @header =	[
+	my $header =	[
 		'Accept'        => '*/*',
 		'Authorization' => "Bearer ".$self->_get_access_token,
-		'User-Agent'    => 'curl/7.55.1',
 		'Content-Type'  => 'application/json',
 		'Consistencylevel' => $self->_get_consistencylevel
 		];
 	# Create the request
-	my $r  = HTTP::Request->new(
-		$verb => $url,
-		@header,
-	);	
+	my $r;
+	# Als het een POST/PATCH/DELETE is dan moet er payload zijn
+	if ( (uc($verb) eq 'POST' )|| (uc($verb) eq 'PATCH' ) || (uc($verb) eq 'DELETE' ) ){
+		my $data;
+		if ($payload){
+			$data = encode_json($payload);
+		}else{
+			$data = '{}';
+		}
+		$r = HTTP::Request->new(
+			$verb => $url,
+			$header,
+			$data
+		);
+	}else{  
+		$r = HTTP::Request->new(
+			$verb => $url,
+			$header,
+		);	
+	}
 	# Let the useragent make the request
+	#print Dumper $r;
 	my $result = $ua->request($r);
+	#print Dumper $result;
 	# adding error handling
 	# rc 429 is throttling
 	if (! $result->{"_rc"} eq "200"){

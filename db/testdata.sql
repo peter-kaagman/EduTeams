@@ -1,6 +1,6 @@
 -- Test data voor op ictatlascollege
 Insert Into magisterteam ('ROWID','naam','type') Values 
----    (1,'2324-0Test1.abc','clustergroep'),
+--    (1,'2324-0Test1.abc','clustergroep'),
     (2,'2324-0Test2.xyz','clustergroep')
 ;
 -- UPN is in magister niet bekend
@@ -22,9 +22,9 @@ Insert Into magisterleerling ('ROWID','stamnr','b_nummer','upn','naam') values
     (4,'234560','b234560','b234560@ict-atlascollege.nl','Test Leerling 4')
 ;
 Insert Into magisterleerlingenrooster ('leerlingid','teamid') values
---    ('1','1'),
---    ('2','1'),
---    ('3','1'),
+ --   ('1','1'),
+ --   ('2','1'),
+ --   ('3','1'),
     ('2','2'),
     ('3','2'),
     ('4','2')

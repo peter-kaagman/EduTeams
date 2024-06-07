@@ -49,7 +49,7 @@ my $sth_azuredocrooster = $dbh->prepare($qry);
 
 # azureleerling
 $dbh->do('Delete From azureleerling'); # Truncate the table 
-$qry = "Insert Into azureleerling (upn, naam) values (?,?) ";
+$qry = "Insert Into azureleerling (upn, azureid, naam) values (?,?,?) ";
 my $sth_azureleerling = $dbh->prepare($qry);
 my $AzureLeerlingen; # ipv zoeken in de database
 #$qry = "Select ROWID From azureleerling Where upn = ?";
@@ -109,8 +109,12 @@ sub getAzureLeerlingROWID {
     }else{
         # Leerling niet gevonden => aanmaken
         #print Dumper $docent;
-        #my $qry = "Insert Into azuredocent (upn, naam) values (?,?) ";
-        $sth_azureleerling->execute(lc($leerling->{'userPrincipalName'}),$leerling->{'displayName'});
+        #my $qry = "Insert Into azuredocent (upn, azureid, naam) values (?,?,?) ";
+        $sth_azureleerling->execute(
+            lc($leerling->{'userPrincipalName'}),
+            $leerling->{'id'},
+            $leerling->{'displayName'}
+        );
         my $rowid =  $dbh->last_insert_id("","","azureleerling","ROWID");
         $AzureLeerlingen->{$leerling->{'userPrincipalName'}} = $rowid;
         return $rowid;
@@ -129,9 +133,6 @@ sub getAzureTeamROWID {
 if ($groups_object->_get_access_token){
     # Eerst de groepen ophalen in Graph
 	my $groups = $groups_object->fetch_groups();
-    #my (@retryOwner, @retryMember); # Groups without owners or members are retried
-	my $count = scalar @$groups;
-	$logger->make_log("$FindBin::Bin/$FindBin::Script $count groupen opgehaald.");
 	while (my ($i, $group) = each @{$groups}){
         
         # Normalize description, in sommige gevallen staat de LOC ervoor
@@ -153,15 +154,8 @@ if ($groups_object->_get_access_token){
             );
             # Eigenaren (docenten ophalen)
             my $owners = $group_object->fetch_owners();
-            # $owners is een AOH
-            # # Store a group without owners for retry
-            # if (! @$owners ){
-            #     push (@retryOwner, $group);
-            #     say "Geen members". $group->{'description'};
-            # }
-
             foreach my $owner (@$owners){
-                $logger->make_log("$FindBin::Bin/$FindBin::Script Docent gevonden: ".$owner->{'displayName'});
+                #print Dumper $owner;
                 my $azuredocentROWID = getAzureDocentROWID($owner);
                 # RowId docent en team is bekend => toevoegen aan het rooster
                 $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID)
@@ -170,24 +164,15 @@ if ($groups_object->_get_access_token){
             # Leden (leerlingen ophalen)
             my $members = $group_object->fetch_members();
             # $members is een AOH
-            my $count = 0;
             foreach my $member (@$members){
                 # NB Docenten zijn zelf ook lid, deze dus overslaan
                 if (lc($member->{'userPrincipalName'}) =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
-                    $count++;
                     $logger->make_log("$FindBin::Bin/$FindBin::Script Leerling gevonden:".$member->{'displayName'});
                     my $azureleerlingROWID = getAzureLeerlingROWID($member);
                     # RowId leerling en team is bekend => toevoegen aan het rooster
                     $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
                 }
             }
-            # $count is the number of members excluding those who are allso owner
-            #say $group->{'description'} .' heeft '. $count . 'leden'; 
-            # if ( $count eq 0 ){
-            #     say "Geen members". $group->{'description'};
-            #     push (@retryMember, $group);
-            # }
-
         }
 	}
     # say "No Owner:";

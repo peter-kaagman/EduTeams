@@ -248,9 +248,24 @@ sub create_class {
 
 sub archive_class {
 	# Om gegevens verlies te voorkomen worden teams niet verwijdert maar gearchiveerd.
+	# Archiveren is een async operatie, duur een eeuwigheid, description daarom ook aan-
+	# passen zodat het archiveren direct duidelijk is en de group ook herkenbaar is als 
+	# zijnde gearchiveerd. Een groups heeft die property namelijk niet.
 	my $self = shift;
-	my $team - shift;
-	say "$team archiveren";
+	my $team_id = shift;
+	my $team_naam = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/$team_id/archive";
+	my $result = $self->callAPI($url, 'POST');
+	if ($result->is_success){
+		# archiveren is geslaagd => description aanpassen
+		# dit is een PATCH
+		$url = $self->_get_graph_endpoint . "/v1.0/groups/$team_id";
+		my $payload = {
+			"description" => 'Archived_'.$team_naam
+		};
+		my $result = $self->callAPI($url, 'PATCH', $payload);
+		print Dumper $result;
+	}
 }
 
 

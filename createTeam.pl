@@ -110,7 +110,7 @@ while(my $row = $sth->fetchrow_hashref()){
     my $date = $row->{'timestamp'};
     #  say "Nu    : " . $now;
     #  say "Team  : " . $date;
-    #  say "Delta : " . ($now-$date)/60;
+      say "Delta : " . ($now-$date)/60;
     if ( (($now-$date)/60)  > 15 ){
         $logger->make_log("$FindBin::Bin/$FindBin::Script Group transitie: $row->{'naam'}");
         my $result = $groups_object->team_from_group($row->{'id'});
@@ -121,5 +121,7 @@ while(my $row = $sth->fetchrow_hashref()){
     }else{
         $logger->make_log("$FindBin::Bin/$FindBin::Script Deze gaan we nietdoen: $row->{'naam'}: $now => $row->{'timestamp'}");
     }
+    # Na de transitie naar team moet er nog een controle komen dat er een SPO general gemaakt is
+    # dit schijnt soms niet te gebeuren.
 }
 $logger->make_log("$FindBin::Bin/$FindBin::Script einde.");
