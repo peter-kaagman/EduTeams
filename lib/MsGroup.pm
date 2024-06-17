@@ -1,3 +1,4 @@
+# Group, team or class methods
 package MsGroup;
 
 use v5.10;
@@ -32,30 +33,21 @@ has 'select'         => (
 	writer => '_set_select',
 ); 
 
-sub do_fetch {
-	my $self = shift;							# get a reference to the object
-	my $url = shift;							# get the URL from the function call
-	my $found = shift;							# get the array reference which holds the result
-	my $result = $self->callAPI($url, 'GET');	# do_fetch calls callAPI to do the HTTP request
-	# Process if rc = 200
+#
+# Group related
+#
+sub group_delete {
+	my $self = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/groups/".$self->_get_id;
+	my $result = $self->callAPI($url,'DELETE');
 	if ($result->is_success){
-		my $reply =  decode_json($result->decoded_content);
-		while (my ($i, $el) = each @{$$reply{'value'}}) {
-			push @{$found}, $el;
-		}
-		# do a recursive call if @odata.nextlink is there
-		if ($$reply{'@odata.nextLink'}){
-			do_fetch($self,$$reply{'@odata.nextLink'}, $found);
-		}
-		#print Dumper $$reply{'value'};
+		return "deleted: " . $self->_get_id;
 	}else{
-		# Error handling
-		print Dumper $result;
-		die $result->status_line;
+		return $result;
 	}
 }
 
-sub fetch_owners {
+sub group_fetch_owners {
 	my $self = shift;
 	my @owners;
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups/".$self->_get_id."/owners/?";
@@ -66,12 +58,12 @@ sub fetch_owners {
 		$url .= $self->_get_select;
 	}
 	#say "Fetching $url";
-	do_fetch($self,$url, \@owners);
+	$self->fetch_list($url, \@owners);
 	return  \@owners;
 	
 }
 
-sub fetch_members {
+sub group_fetch_members {
 	my $self = shift;							# get a reference to the object itself
 	my @members;								# an array to hold the result
 	# compose an URL
@@ -85,12 +77,12 @@ sub fetch_members {
 		$url .= $self->_get_select;
 	}
 	$url .= '&$count=true';		# adding $count just to be sure
-	do_fetch($self,$url, \@members); # actual fetch is done in do_fetch()
+	$self->fetch_list($url, \@members); 
 	return  \@members; # return a reference to the resul
 	
 }
 
-sub addMember {
+sub group_addMember {
 	my $self = shift;
 	my $member_id = shift;
 	my $is_owner = shift;
@@ -100,21 +92,19 @@ sub addMember {
 	};
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups/".$self->_get_id.'/members/$ref';
 	my $result = $self->callAPI($url,'POST', $payload);
-	print Dumper $result;
 	return $result;
 }
 
-sub removeMember {
+sub group_removeMember {
 	my $self = shift;
 	my $member_id = shift;
 	my $payload = {	};
 	my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$self->_get_id.'/members/'.$member_id.'/$ref';
 	my $result = $self->callAPI($url, 'DELETE',$payload);
-	print Dumper $result;
 	return $result;
 }
 
-sub removeOwner {
+sub group_removeOwner {
 	my $self = shift;
 	my $owner_id = shift;
 	my $payload = {	};
@@ -126,6 +116,99 @@ sub removeOwner {
 	# }
 	return $result;
 }
+
+sub group_patch {
+	my $self = shift;
+	my $payload = shift;
+	my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$self->_get_id;
+	my $result = $self->callAPI($url, 'PATCH',$payload);
+	if ($result->is_success){
+		return "Ok";
+	}else{
+		return $result;
+	}
+}
+
+
+#
+# Team related
+#
+sub  team_members{
+	my $self = shift;
+	my $members;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id."/members/";
+	# negeer de select van de create object
+	$url .= '?$Select=userId,id,roles';
+	say "Fetching $url";
+	$self->fetch_list($url, $members);
+	return  $members;
+}
+
+sub team_bulk_add_members {
+	my $self = shift;
+	my $payload = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id."/members/add";
+	say $url;
+	my $result = $self->callAPI($url, 'POST', $payload);
+	return $result;
+}
+
+sub  team_info{
+	my $self = shift;
+	my $info;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id;
+	# add a selectif needed, have in fact a select => see object creation
+	if ($self->_get_select){
+		$url .= '?' . $self->_get_select;
+	}
+	#say "Fetching $url";
+	$info = $self->callAPI($url, 'GET');
+	return  decode_json($info->{'_content'});
+}
+
+sub team_channel_id {
+	my $self = shift;
+	my $name = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id.'/channels';
+	$url .= '/?$select=id,displayName';
+	$url .= '&$filter=displayName eq \'General\'';
+	#say $url;
+	my $result = $self->callAPI($url, 'GET');
+	if ($result->is_success){
+		my $content =  decode_json($result->decoded_content);
+		return $content->{'value'}[0]->{'id'};
+		#return (decode_json($result->{'value'}))[0]->{'id'};
+	}else{
+		print Dumper $result;
+		return 0;
+	}
+}
+
+sub team_check_general {
+	my $self = shift;
+	# Het kan voorkomen dat er een probleem met SOP site voor het team.
+	# Dit kun je na 5 minuten herstellen door een GetFilesFolder van General op te vragen.
+	# Om dit te kunnen doen heb je wel het ID van het kanaal general nodig
+	my $general_id = $self->team_channel_id('General');
+	if ($general_id){
+		my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id;
+		$url .= "/channels/$general_id/filesFolder";
+		my $result = $self->callAPI($url, 'GET');
+		print Dumper $result;
+		say $result->is_success;
+		# add a selectif needed, have in fact a select => see object creation
+		# $info = $self->callAPI($url, 'GET');
+		# return  decode_json($info->{'_content'});
+		return 1;
+	}else{
+		return 0;
+	}
+}
+#
+# Class related
+#
+
+
 __PACKAGE__->meta->make_immutable;
 42;
 # vim: set foldmethod=marker

@@ -1,0 +1,8 @@
+getAzureTeam:
+Moet op basis van mailNickname omdat zowel description als displayName aangepast kunnen worden.
+
+bulkAdd
+Test met een niet bestaande gebruiker
+
+tokenLifeSpan => done
+Testen hoe lang een access_token meegaat en hoe herauthenticeren

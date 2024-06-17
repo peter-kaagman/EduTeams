@@ -20,7 +20,7 @@ Config::Simple->import_from("$FindBin::Bin/config/EduTeamsTest.cfg",\%config) or
 
 my $logger = Logger->new(
     'filename' => "$FindBin::Bin/Log/EduTeams.log",
-    'verbose' => 0
+    'verbose' => 1
 );
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
@@ -71,8 +71,8 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	'filter'        => '$filter=startswith(mail,\'Section_\')',
-    'select'        => '$select=id,displayName,description,mail',
+	'filter'        => '$filter=startswith(mailNickname,\'Section_\')',
+    'select'        => '$select=id,displayName,description,mailNickname',
 );
 
 
@@ -131,17 +131,21 @@ sub getAzureTeamROWID {
 }
 
 if ($groups_object->_get_access_token){
-    # Eerst de groepen ophalen in Graph
-	my $groups = $groups_object->fetch_groups();
-	while (my ($i, $group) = each @{$groups}){
+    # Eerst de classes ophalen in Graph
+	my $teams = $groups_object->groups_fetch();
+    say "Alle groepen";
+    print Dumper $teams;
+
+	while (my ($i, $team) = each @{$teams}){
         
         # Normalize description, in sommige gevallen staat de LOC ervoor
         # Dit voorkomt ook dat ik kan filteren op description
-        $group->{'description'} =~ s/.+\w\w\w\s(.+)/$1/;
+        $team->{'description'} =~ s/.+\w\w\w\s(.+)/$1/;
         # Alleen de huidige lesperiode
-        if ($group->{'description'} =~ /^$config{'MAGISTER_LESPERIODE'}/){
-            $logger->make_log("$FindBin::Bin/$FindBin::Script Team gevonden: ". $group->{description});
-            my $azureteamROWID = getAzureTeamROWID($group);
+        if ($team->{'description'} =~ /^$config{'MAGISTER_LESPERIODE'}/){
+            # In de eerste stap worden "teams" gezocht op 
+            $logger->make_log("$FindBin::Bin/$FindBin::Script Team gevonden: ". $team->{description});
+            my $azureteamROWID = getAzureTeamROWID($team);
             # Object maken voor deze groep met het doel owers en leden op te halen
             my $group_object = MsGroup->new(
                 'app_id'        => $config{'APP_ID'},
@@ -149,30 +153,34 @@ if ($groups_object->_get_access_token){
                 'tenant_id'     => $config{'TENANT_ID'},
                 'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
                 'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+                'access_token'  => $groups_object->_get_access_token, # hergebruik het token
                 'select'        => '$select=id,displayName,userPrincipalName',
-                'id'            => $group->{'id'},
+                'id'            => $team->{'id'},
             );
-            # Eigenaren (docenten ophalen)
-            my $owners = $group_object->fetch_owners();
-            foreach my $owner (@$owners){
-                #print Dumper $owner;
-                my $azuredocentROWID = getAzureDocentROWID($owner);
-                # RowId docent en team is bekend => toevoegen aan het rooster
-                $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID)
-            }
+            # Member ophalen van het team
+            my $members = $group_object->team_members();
+            print Dumper $members;
+            # # Eigenaren (docenten ophalen)
+            # my $owners = $group_object->fetch_owners();
+            # foreach my $owner (@$owners){
+            #     #print Dumper $owner;
+            #     my $azuredocentROWID = getAzureDocentROWID($owner);
+            #     # RowId docent en team is bekend => toevoegen aan het rooster
+            #     $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID)
+            # }
 
-            # Leden (leerlingen ophalen)
-            my $members = $group_object->fetch_members();
-            # $members is een AOH
-            foreach my $member (@$members){
-                # NB Docenten zijn zelf ook lid, deze dus overslaan
-                if (lc($member->{'userPrincipalName'}) =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
-                    $logger->make_log("$FindBin::Bin/$FindBin::Script Leerling gevonden:".$member->{'displayName'});
-                    my $azureleerlingROWID = getAzureLeerlingROWID($member);
-                    # RowId leerling en team is bekend => toevoegen aan het rooster
-                    $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
-                }
-            }
+            # # Leden (leerlingen ophalen)
+            # my $members = $group_object->fetch_members();
+            # # $members is een AOH
+            # foreach my $member (@$members){
+            #     # NB Docenten zijn zelf ook lid, deze dus overslaan
+            #     if (lc($member->{'userPrincipalName'}) =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
+            #         $logger->make_log("$FindBin::Bin/$FindBin::Script Leerling gevonden:".$member->{'displayName'});
+            #         my $azureleerlingROWID = getAzureLeerlingROWID($member);
+            #         # RowId leerling en team is bekend => toevoegen aan het rooster
+            #         $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
+            #     }
+            # }
         }
 	}
     # say "No Owner:";

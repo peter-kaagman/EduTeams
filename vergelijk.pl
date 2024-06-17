@@ -11,7 +11,8 @@ use Data::Dumper;
 use FindBin;
 use Config::Simple;
 use Time::Piece;
-use Time::Seconds;use JSON qw(decode_json encode_json);
+use Time::Seconds;
+use JSON qw(decode_json encode_json);
 use lib "$FindBin::Bin/lib";
 
 use Logger; # Om te loggen
@@ -21,7 +22,7 @@ use MsGroup;
 
 my $logger = Logger->new(
     'filename' => "$FindBin::Bin/Log/EduTeams.log",
-    'verbose' => 0
+    'verbose' => 1
 );
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
@@ -38,7 +39,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
     or die $DBI::errstr;
 
 # Handler om gemaakte groepen te kunnen vastleggen
-my $sth_class_created = $dbh->prepare('Insert Into groupcreated (\'id\',\'timestamp\',\'naam\',\'members\',\'owners\') values (?,?,?,?,?)');
+my $sth_team_created = $dbh->prepare('Insert Into teamcreated (timestamp, naam, members, owners ) values (?,?,?,?)');
 
 my ($Azure, $Magister, $LlnId, $ToDo); # Global hashes to store info
 
@@ -54,44 +55,53 @@ my $groups_object = MsGroups->new(
 );
 
 
-sub createAzureClass {
+sub createEduTeam {
     my $name = shift;
-    my $mailnick;
-    # Jaarlagen krijgen een herkenbare mailnick
+    my $description;
+    # Jaarlagen krijgen een herkenbare description 
     if ($Magister->{$name}->{'type'} eq 'jaarlaag'){
-        $mailnick = "Section_jaarlaag_$name";
+        $description = $name."_Jaarlag";
     }else{
-        $mailnick = "Section_$name";
+        $description = $name;
     }
-    # Data structure om een groep te maken
-    my $new_class = {
-        "description" => $name,
-        "displayName" => $name,
-        "mailNickName" => $mailnick,
-        "externalId" => "Section_firstClass",
-        "course" => {
-            "displayName" => "FirstClass",
-        },
+    my $new_team = {
+        'template@odata.bind' => 'https://graph.microsoft.com/v1.0/teamsTemplates(\'educationClass\')',
+        "description" => "Section_".$description,
+        "displayName" => "Section_".$name
     };
-    # Leden en eignaren worden later toegevoegd
-    #print Dumper $new_class;
+    # Team wordt gemaakt via de teams interface
+    # het MOET 1 eigenaar hebben (ook niet meer dan 1)
 
-    my $result = $groups_object->create_class($new_class);
+    # Haal de eerste docent uit de hash
+    my ($user_id) = keys %{$Magister->{$name}->{'docenten'}};
+    # En verwijder hem uit de lijst zodat hij niet nogmaals toegevoegd wordt
+    delete($Magister->{$name}->{docenten}->{$user_id});
+    # Maak een member schema
+    my $user = {
+        '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+        'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$user_id\')"
+    };
+    # Voeg de owner rol toe
+    push(@{$user->{'roles'}}, 'owner');
+    # Voeg het member schema toe aan het team schema
+    push(@{$new_team->{'members'}}, $user);
+
+    my $result = $groups_object->team_create($new_team);
     if ($result->is_success){
-        my $created_class = decode_json($result->{'_content'});
-        #say "ID: $created_class->{'id'}";
-        my $now = localtime;
-        #say "TimeStamp: $now" ;
+        # Er komt geen result object terug met ID
+        # Ik wil echter wel een kwartier wachten voor ik verder iets doe met het team
+        # toevoegen aan groupcreated dus zonder id.
+        my $now = localtime->epoch;
+    #     #say "TimeStamp: $now" ;
         # Gegevens in de database opnemen om gebruikers toevoegen 
-        # en de team transitie
         # naam, leden nog toevoegen aan de database, dan hoeft dat niet nog een keer opgezocht te wordne
-        $sth_class_created->execute(
-            $created_class->{'id'},
-            $now->epoch,$name, 
+        $sth_team_created->execute(
+            $now,
+            $name, 
             encode_json($Magister->{$name}->{'leerlingen'}),
             encode_json($Magister->{$name}->{'docenten'})
-            );
-        $logger->make_log("$FindBin::Bin/$FindBin::Script Class $name gemaakt,  id is $created_class->{'id'}");
+        );
+        $logger->make_log("$FindBin::Bin/$FindBin::Script Class $name gemaakt,  naam is $name}");
     } else {
         #foutafhandeling
         if ($result->{'_rc'} eq '400'){ # bad request
@@ -297,16 +307,17 @@ AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
 say "ToDo";
 print Dumper $ToDo if $ToDo;
-# say "Azure";
-# print Dumper $Azure;
-# say "Magister";
-# print Dumper $Magister;
+#exit 1;
+say "Azure";
+print Dumper $Azure;
+say "Magister";
+print Dumper $Magister;
 
 # Magister
     # Archiveren
     # MagisterMaken <= Een team staat in Magister maar niet in Azure
 foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
-    createAzureClass($NewClass);
+    createEduTeam($NewClass);
 }
     # MagisterDocentToevoegen
     # MagisterLeerlingToevoegen
@@ -315,7 +326,7 @@ foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
     # AzureArchiverenNietInMagister <= Een team staat wel in Azure maar niet (meer) in Magister
 foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
     # Om te archiveren is alleen het team id nodig
-    $groups_object->archive_class(
+    $groups_object->team_archive(
         $Azure->{$Team2Archive}->{'id'},
         $Team2Archive
     );
@@ -327,6 +338,7 @@ while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}}))
         'app_id'        => $config{'APP_ID'},
         'app_secret'    => $config{'APP_PASS'},
         'tenant_id'     => $config{'TENANT_ID'},
+        'access_token'  => $groups_object->_get_access_token, #reuse token
         'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
         'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
         'select'        => '$select=id,displayName,userPrincipalName',
@@ -334,7 +346,7 @@ while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}}))
     );
     foreach my $lln_upn  (@{$array}){
         say "LLN id $lln_upn => $LlnId->{$lln_upn}";
-        $group_object->removeMember($LlnId->{$lln_upn})
+        $group_object->team_removeMember($LlnId->{$lln_upn})
     }
 }  
     # AzureDocentVerwijderen
@@ -350,7 +362,7 @@ while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
         'id'            => $id,
     );
     foreach my $docent_id  (@{$array}){
-        $group_object->removeMember($docent_id)
+        $group_object->team_removeMember($docent_id)
     }
 }  
 

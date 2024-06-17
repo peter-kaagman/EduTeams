@@ -14,22 +14,22 @@ extends 'MsGraph';
 
 
 
-sub do_fetch { # {{{1
-	my $self = shift;
-	my $url = shift;
-	my $user_info = shift;
-	my $result = $self->callAPI($url, 'GET');
-	if ($result->is_success){
-		my $reply =  decode_json($result->decoded_content);
-		print Dumper $reply;
-        foreach my $key (keys %{$reply->{'value'}[0]}){
-            $$user_info{$key} = $reply->{'value'}[0]{$key};
-        }
-	}else{
-		print Dumper $result;
-		die $result->status_line;
-	}
-} #	}}}
+# sub do_fetch { # {{{1
+# 	my $self = shift;
+# 	my $url = shift;
+# 	my $user_info = shift;
+# 	my $result = $self->callAPI($url, 'GET');
+# 	if ($result->is_success){
+# 		my $reply =  decode_json($result->decoded_content);
+# 		print Dumper $reply;
+#         foreach my $key (keys %{$reply->{'value'}[0]}){
+#             $$user_info{$key} = $reply->{'value'}[0]{$key};
+#         }
+# 	}else{
+# 		print Dumper $result;
+# 		die $result->status_line;
+# 	}
+# } #	}}}
 
 sub fetch_id_by_upn { #	{{{1
 	my $self = shift;

@@ -71,15 +71,14 @@ Create Table If Not Exists azureleerlingrooster(
     Foreign Key (azureteam_id) References azureteam(ROWID)
 );
 
--- Voor de transitie van groups naar teams
-Create Table If Not Exists groupcreated(
-    id Text Not NUll Unique,
+-- Voor de verdere inrichting van het team
+Create Table If Not Exists teamcreated(
     naam Text Not NULL,
     timestamp Text Not Null,
+    id Text Unique,
     members Text Not Null,
-    members_added Text default '0',
     owners Text Not Null,
-    owners_added Text default '0',
-    general_checked Text defailt '0'
+    general_checked Text default '0',
+    naam_hersteld Text default '0'
 );
 

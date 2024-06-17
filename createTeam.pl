@@ -18,7 +18,7 @@ use Time::Seconds;
 use lib "$FindBin::Bin/lib";
 
 use MsGroups;
-#use MsGroup;
+use MsGroup;
 use MsUser;
 use Logger;
 
@@ -42,86 +42,220 @@ my $dsn = "DBI:$driver:dbname=$db";
 my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
     or die $DBI::errstr;    
 
+my $sth_azureleerling = $dbh->prepare("Insert Into azureleerling  (upn, azureid, naam) values (?,?,'van create team')");
+
+
+my $groups_object = MsGroups->new(
+    'app_id'        => $config{'APP_ID'},
+    'app_secret'    => $config{'APP_PASS'},
+    'tenant_id'     => $config{'TENANT_ID'},
+    'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+    'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+    'filter'        => '$filter=startswith(mail,\'Section_\')',
+    'select'        => '$select=id,displayName,description,mail',
+);
+
+my $user_object = MsUser->new(
+    'app_id'        => $config{'APP_ID'},
+    'app_secret'    => $config{'APP_PASS'},
+    'tenant_id'     => $config{'TENANT_ID'},
+    'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+    'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+    'filter'        => '$filter=startswith(mail,\'Section_\')',
+    'access_token'  => $groups_object->_get_access_token, # resuse token
+    'token_expires' => $groups_object->_get_token_expires,
+    'select'        => '$select=id,displayName,description,mail',
+);
+# Een hash om lln id's te bewaren, indexed op UPN
+my ($lln_by_upn, $lln_by_id);
+# Er is een tabel AzureLeerlingen, daar kunnen al gegevens in staan, scheelt weer requests
+my $sth = $dbh->prepare("Select upn,azureid From azureleerling");
+$lln_by_upn = $sth->fetchall_hashref('upn');
+$lln_by_id = $sth->fetchall_hashref('azureid');
 
 # Eens kijken of er iets te doen is
-my $sth = $dbh->prepare('Select ROWID,* From groupcreated');
+$sth = $dbh->prepare('Select ROWID,* From teamcreated');
 $sth->execute();
+
+
 while(my $row = $sth->fetchrow_hashref()){
-    my $groups_object = MsGroups->new(
-        'app_id'        => $config{'APP_ID'},
-        'app_secret'    => $config{'APP_PASS'},
-        'tenant_id'     => $config{'TENANT_ID'},
-        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-        'filter'        => '$filter=startswith(mail,\'Section_\')',
-        'select'        => '$select=id,displayName,description,mail',
-    );
-    my $users_object = MsUser->new(
-        'app_id'        => $config{'APP_ID'},
-        'app_secret'    => $config{'APP_PASS'},
-        'tenant_id'     => $config{'TENANT_ID'},
-        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-        'filter'        => '$filter=startswith(mail,\'Section_\')',
-        'select'        => '$select=id,displayName,description,mail',
-    );
-    # print Dumper $row;
-    # Vlgs https://learn.microsoft.com/en-us/graph/teams-create-group-and-team
-    # - Group maken (wat dus al gedaan is)
-    # - daarna via de groups interface gebruikers toevoegen
-    # - 15 minuten wachten
-    # - teams transitie
-    #
-    # Owners moeten toegevoegd zijn voor de transitie
-    if ($row->{'owners_added'} eq '0'){
-        # Owners moeten nog toegevoegd worden
-        my $owners = decode_json($row->{'owners'});
-        # print Dumper $owners;
-        foreach my $id (keys %{$owners}){
-            my $result = $groups_object->add_owner($row->{'id'},$id);
-            if ($result eq 'Ok'){
+    #my $now = localtime->epoch;
+    #print Dumper $row;
+    # Verwijder het record als  alles al gedaan is
+    if (
+        ($row->{'naam_hersteld'} eq 0) ||
+        ($row->{'general_checked'} eq 0) ||
+        ( %{decode_json($row->{'owners'})} > 0) || 
+        ( %{decode_json($row->{'members'})} > 0) 
+    ){
+        if ( ( (localtime->epoch - $row->{'timestamp'}) )  > 900 ){ # 900 seconden =>15 minuten
+            $logger->make_log("$FindBin::Bin/$FindBin::Script Group transitie: $row->{'naam'}");
+            # Kan zijn dat het een 2e run is en de id al bekend is
+            my $team_id;
+            if ($row->{'id'}){
+                $team_id = $row->{'id'}
             }else{
-                $logger->make_log("$FindBin::Bin/$FindBin::Script $row->{'naam'} $row->{'id'} kan owner $id niet toevoegen");
+                # Niet in de database dus ff opzoeken via de mailNickname, deze is immutable en heeft Section_ als prefix
+                $team_id = $groups_object->group_find_id("Section_".$row->{'naam'});
             }
-        }
-        $dbh->do("Update groupcreated Set owners_added = \'1\' Where ROWID = $row->{'rowid'}");
-    }
-    if ($row->{'members_added'} eq '0'){
-        # Gebruikers moeten nog toegevoegd worden
-        my $members = decode_json($row->{'members'});
-        # print Dumper $members;
-        foreach my $upn (keys %{$members}){
-            # Van leerlingen is alleen de UPN bekend vanuit Magister
-            my $member_id = $users_object->fetch_id_by_upn($upn);
-            #say "$upn => $member_id";
-            if ($member_id ne 'onbekend'){
-                my $result = $groups_object->add_member($row->{'id'},$member_id);
-                if ($result eq 'Ok'){
+            if ($team_id){
+                 $logger->make_log("$FindBin::Bin/$FindBin::Script INFO Id bekend: $team_id");
+                # Udate de database, waarschijnlijk alleen handig tijdens debuggen
+                $dbh->do("Update teamcreated Set id = '$team_id' Where ROWID = $row->{'rowid'}");
+                my $group_object = MsGroup->new(
+                    'app_id'        => $config{'APP_ID'},
+                    'app_secret'    => $config{'APP_PASS'},
+                    'tenant_id'     => $config{'TENANT_ID'},
+                    'access_token'  => $groups_object->_get_access_token, #reuse token
+                    'token_expires' => $groups_object->_get_token_expires,
+                    'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+                    'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+                    'select'        => '$select=id,displayName,userPrincipalName',
+                    'id'            => $team_id,
+                );
+                
+                # Naam herstellen
+                if ($row->{'naam_hersteld'} eq 0 ){
+                    say "displayName en description herstellen";
+                    my $namechange = {
+                        "displayName" => $row->{'naam'},
+                        "description" => $row->{'naam'},
+                    };
+                    my $result = $group_object->group_patch($namechange);
+                    if ($result eq 'Ok'){
+                        #say "Naamsverandering uitgevoerd.";
+                        $dbh->do("Update teamcreated Set naam_hersteld = 1 Where ROWID = $row->{'rowid'}");
+                    }else{
+                        $logger->make_log("$FindBin::Bin/$FindBin::Script ERRORFout met naamsverandering.".encode_json($result));
+                        #print Dumper $result;
+                    }
+                }
+
+                # Owners toevoegen
+                my $owners = decode_json($row->{'owners'});
+                if (%{$owners}){
+                    # Members toevoegen met conversationMember: add (bulbk)
+                    # Voordeel: members toevoegen met UPN of ID
+                    # Nadeel: maximaal 200 member
+                    my $members;
+                    #say "Eigenaren toevoegen";
+                    foreach my $id (keys %{$owners}){
+                        last if ( ($members->{'values'}) && (@{$members->{'values'}} eq 200) ); # nooit meer dan 200 members toevoegen
+                        my $user = {
+                            '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+                            'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$id\')"
+                        };
+                        push(@{$user->{'roles'}}, 'owner');
+                        push(@{$members->{'values'}}, $user);
+                    }
+                    #print Dumper $members;
+                    if (%{$members}){
+                        #say encode_json($members);
+                        my $result = $group_object->team_bulk_add_members($members);
+                        if ($result->is_success){
+                            my $reply =  decode_json($result->{'_content'});
+                            #print Dumper $reply;
+                            foreach my $report (@{$reply->{'value'}}){
+                                print Dumper $report;
+                                if ($report->{'error'}){
+                                    say "error"
+                                }else{
+                                    #say "geen error, docent $report->{'userId'} is toegevoegd";
+                                    # Success => verwijderen uit de todo hash
+                                    delete($owners->{$report->{'userId'}})
+                                }
+                            }
+                            # Schrijf de todo hash terug naar de database, kan dus ook leeg zijn
+                            my $qry = "Update teamcreated Set owners = '".encode_json($owners)."' Where ROWID = $row->{'rowid'}";
+                            $dbh->do($qry);
+                        }else{
+                            $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR Fout bij het toevoegen van gebruikers aan $row->{'naam'}");
+                        }
+                    }
+                }
+
+                # Leden toevoegen
+                my $leden = decode_json($row->{'members'});
+                if (%{$leden}){
+                    # Members toevoegen met conversationMember: add (bulbk)
+                    # Voordeel: members toevoegen met UPN of ID
+                    # Nadeel: maximaal 200 member
+                    my $members;
+                    say "Leden toevoegen";
+                    foreach my $upn (keys %{$leden}){
+                        last if ( ($members->{'values'}) && (@{$members->{'values'}} eq 200) ); # nooit meer dan 200 members toevoegen
+                        # Leden (lln) staan met een UPN in de hash, 
+                        # toevoegen kan ook met een UPN, maar de terugkoppeling komt op ID
+                        my $lln_id;
+                        # Een hoop gedoe om van de UPN een ID te krijgen en ook vice versa op te kunnen zoeken
+                        if ($lln_by_upn->{$upn}->{'azureid'}){
+                            $lln_id = $lln_by_upn->{$upn}->{'azureid'};
+                            $lln_by_id->{$lln_id}->{'upn'} = $upn;
+                        }else{
+                            $lln_id = $user_object->fetch_id_by_upn($upn);
+                            $lln_by_upn->{$upn}->{'azureid'} = $lln_id;
+                            $lln_by_id->{$lln_id}->{'upn'} = $upn;
+
+                            # ook ff terugschrijven naar azureleerling
+                            if ($lln_id ne 'onbekend'){
+                                $sth_azureleerling->execute($upn,$lln_id);
+                            }
+
+                        }                    
+                        if ($lln_id ne 'onbekend'){ # het is mogelijk dat een lln in Magister niet in Azure staat
+                            my $user = {
+                                '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+                                'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$lln_id\')"
+                            };
+                            push(@{$members->{'values'}}, $user);
+                        }else{
+                            $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR LLN $upn heeft geen Azure account");
+                        }
+                    }
+                    #print Dumper $members;
+                    if (%{$members}){
+                        #say encode_json($members);
+                        my $result = $group_object->team_bulk_add_members($members);
+                        if ($result->is_success){
+                            my $reply =  decode_json($result->{'_content'});
+                            #print Dumper $reply;
+                            foreach my $report (@{$reply->{'value'}}){
+                                print Dumper $report;
+                                if ($report->{'error'}){
+                                    say "error"
+                                }else{
+                                    #say "geen error, lln $lln_by_id->{$report->{'userId'}}  is toegevoegd";
+                                    # Succes => verwijderen uit de todo hash
+                                    delete($leden->{$lln_by_id->{$report->{'userId'}}->{'upn'}});
+                                }
+                            }
+                            # schrijf de todo hash terug naar de database (kan dus ook leeg zijn)
+                            my $qry = "Update teamcreated Set members = '".encode_json($leden)."' Where ROWID = $row->{'rowid'}";
+                            #say $qry;
+                            $dbh->do($qry);
+                        }else{
+                            $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR Fout bij het toevoegen van gebruikers aan $row->{'naam'}");
+                        }
+                    }
+                }
+                say "General channel controleren";
+                # Het kan voorkomen dat er een probleem met SOP site voor het team.
+                # Dit kun je na 5 minuten herstellen door een GetFilesFolder van General op te vragen.
+                my $result = $group_object->team_check_general;
+                if ($result->is_success){
+                    $dbh->do("Update teamcreated Set general_checked = 1 Where ROWID = $row->{'rowid'}");
                 }else{
-                    $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR AddUser $upn, $member_id: $result");
+                    $logger->make_log("$FindBin::Bin/$FindBin::Script  WARNING Probleem met general channel van $row->{'naam'}".encode_json($result));
                 }
             }else{
-                $logger->make_log("$FindBin::Bin/$FindBin::Script Geen AddUser AzureID bekend voor $upn");
+                $logger->make_log("$FindBin::Bin/$FindBin::Script  WARNING Kan geen ID ophalen voor $row->{'naam'}");
             }
-        }
-        $dbh->do("Update groupcreated Set members_added = \'1\' Where ROWID = $row->{'rowid'}");
-    }
-    my $now = localtime->epoch;
-    my $date = $row->{'timestamp'};
-    #  say "Nu    : " . $now;
-    #  say "Team  : " . $date;
-      say "Delta : " . ($now-$date)/60;
-    if ( (($now-$date)/60)  > 15 ){
-        $logger->make_log("$FindBin::Bin/$FindBin::Script Group transitie: $row->{'naam'}");
-        my $result = $groups_object->team_from_group($row->{'id'});
-        if ($result eq 'Ok'){
         }else{
-            $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR Group transitie: $result");
+            $logger->make_log("$FindBin::Bin/$FindBin::Script Deze gaan we niet doen: $row->{'naam'}: ".(localtime->epoch - $row->{'timestamp'}));
         }
     }else{
-        $logger->make_log("$FindBin::Bin/$FindBin::Script Deze gaan we nietdoen: $row->{'naam'}: $now => $row->{'timestamp'}");
+        say "Alles is gedaan => verwijderen";
+        $dbh->do("Delete From teamcreated Where ROWID = $row->{'rowid'}");
     }
-    # Na de transitie naar team moet er nog een controle komen dat er een SPO general gemaakt is
-    # dit schijnt soms niet te gebeuren.
 }
 $logger->make_log("$FindBin::Bin/$FindBin::Script einde.");

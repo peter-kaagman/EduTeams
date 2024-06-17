@@ -27,30 +27,7 @@ has 'select'         => ( # {{{2
 ); #}}}
 # }}}
 
-
-
-
-sub do_fetch { # {{{1
-	my $self = shift;
-	my $url = shift;
-	my $groups = shift;
-	my $result = $self->callAPI($url, 'GET');
-	if ($result->is_success){
-		my $reply =  decode_json($result->decoded_content);
-		while (my ($i, $el) = each @{$$reply{'value'}}) {
-			push @{$groups}, $el;
-		}
-		if ($$reply{'@odata.nextLink'}){
-			do_fetch($self,$$reply{'@odata.nextLink'}, $groups);
-		}
-		#print Dumper $$reply{'value'};
-	}else{
-		print Dumper $result;
-		die $result->status_line;
-	}
-} #	}}}
-
-sub fetch_groups { #	{{{1
+sub groups_fetch { #	{{{1
 	my $self = shift;
 	my @groups;
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups/?";
@@ -63,13 +40,13 @@ sub fetch_groups { #	{{{1
 		#$url .= "&\$top=5";
 	}
 	#$url .= '$count=true';
-	#say "Fetching $url";
-	do_fetch($self,$url, \@groups);
+	say "Fetching $url";
+	$self->fetch_list($url, \@groups);
 	return  \@groups;
 	
 }#	}}}
 
-sub create_group {
+sub group_create {
 	my $self = shift;
 	my $group_info = shift;
 	# callAPI uit msGraph.pm voldoet in dit geval niet
@@ -101,7 +78,9 @@ sub create_group {
 
 }
 
-sub add_member {
+
+# Dit is bedoeld voor groepen, niet voor teams
+sub group_add_member {
 	my $self = shift;
 	my $group_id = shift;
 	my $member_id = shift;
@@ -109,26 +88,7 @@ sub add_member {
 		'@odata.id' => "https://graph.microsoft.com/v1.0/directoryObjects/$member_id"
 	};
 	my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$group_id.'/members/$ref';
-	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'timeout' => '180',
-	);
-	# Create the header
-	my $header =	[
-		'Accept'        => '*/*',
-		'Authorization' => "Bearer ".$self->_get_access_token,
-		'Content-Type'  => 'application/json',
-	];
-	my $data = encode_json($member);
-	# Create the request
-	my $r  = HTTP::Request->new(
-		'POST',
-		$url,
-		$header,
-		$data,
-	);	
-	#print Dumper $r;
-	# Let the useragent make the request
-	my $result = $ua->request($r);
+	my $result = $self->callAPI($url,'POST',$member);
 	if ($result->is_success){
 		sleep(1); #vlgs de doc ff wachten na het toevoegen van een gebruiker
 		return "Ok";
@@ -136,37 +96,20 @@ sub add_member {
 		return "RC $result->{'_rc'}: $result->{'_content'}";
 	}
 }
-sub add_owner {
+
+# Dit is voor groepen, teams anders doen
+sub group_add_owner {
 	my $self = shift;
 	my $group_id = shift;
 	my $owner_id = shift;
 	# Een owner moet ook member zijn
-	my $member_reply = $self->add_member($group_id,$owner_id);
+	my $member_reply = $self->group_add_member($group_id,$owner_id);
 	if ( $member_reply eq 'Ok'){
 		my $owner = {
 			'@odata.id' => "https://graph.microsoft.com/v1.0/directoryObjects/$owner_id"
 		};
 		my $url = $self->_get_graph_endpoint . '/v1.0/groups/'.$group_id.'/owners/$ref';
-		my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-			'timeout' => '180',
-		);
-		# Create the header
-		my $header =	[
-			'Accept'        => '*/*',
-			'Authorization' => "Bearer ".$self->_get_access_token,
-			'Content-Type'  => 'application/json',
-		];
-		my $data = encode_json($owner);
-		# Create the request
-		my $r  = HTTP::Request->new(
-			'POST',
-			$url,
-			$header,
-			$data,
-		);	
-		#print Dumper $r;
-		# Let the useragent make the request
-		my $result = $ua->request($r);
+		my $result = $self->callAPI($url, 'POST', $owner);
 		if ($result->is_success){
 			sleep(1); #vlgs de doc ff wachten na het toevoegen van een gebruiker
 			return "Ok";
@@ -178,75 +121,51 @@ sub add_owner {
 	}
 }
 
-sub team_from_group{
+sub group_find_id {
 	my $self = shift;
-	my $group_id = shift;
-	say "Groep $group_id wordt een team";
-	my $payload = {
-		'template@odata.bind' => "https://graph.microsoft.com/v1.0/teamsTemplates('educationClass')",
-  		'group@odata.bind' => "https://graph.microsoft.com/v1.0/groups('$group_id')"
-
-	};
-	my $url = $self->_get_graph_endpoint . '/v1.0/teams';
-	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'timeout' => '180',
-	);
-	# Create the header
-	my $header =	[
-		'Accept'        => '*/*',
-		'Authorization' => "Bearer ".$self->_get_access_token,
-		'Content-Type'  => 'application/json',
-	];
-	my $data = encode_json($payload);
-	# Create the request
-	my $r  = HTTP::Request->new(
-		'POST',
-		$url,
-		$header,
-		$data,
-	);	
-	#print Dumper $r;
-	# Let the useragent make the request
-	my $result = $ua->request($r);
-	print Dumper $result;
+	my $name = shift;
+	my $url = $self->_get_graph_endpoint . '/v1.0/groups?$select=id&$filter=startswith(mailNickname,\''.$name.'\')';
+	my $result = $self->callAPI($url, 'GET');
 	if ($result->is_success){
-		return "Ok";
+		#print Dumper $result;
+		my $json = decode_json($result->{'_content'});
+		#say $json->{'value'}[0]->{'id'};
+		return $json->{'value'}[0]->{'id'};
 	}else{
-		return "RC $result->{'_rc'}: $result->{'_content'}";
+		#print Dumper $result;
+		return 0;
 	}
+
 }
 
 
-sub create_class {
+#
+# Teams related
+#
+sub teams_fetch { #	{{{1
 	my $self = shift;
-	my $class_info = shift;
-	my $url = $self->_get_graph_endpoint . "/v1.0/education/classes";
-	my $ua = LWP::UserAgent->new(		# Create a LWP useragnent (beyond my scope, its a CPAN module)
-		'timeout' => '180',
-	);
-	# Create the header
-	my $header =	[
-		'Accept'        => '*/*',
-		'Authorization' => "Bearer ".$self->_get_access_token,
-		'Content-Type'  => 'application/json',
-		'Consistencylevel' => $self->_get_consistencylevel
-	];
-	my $payload = encode_json($class_info);
-	# Create the request
-	my $r  = HTTP::Request->new(
-		'POST',
-		$url,
-		$header,
-		$payload,
-	);	
-	print Dumper $r;
-	# Let the useragent make the request
-	my $result = $ua->request($r);
-	return $result;
+	my @teams;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/?";
+	if ($self->_get_filter){
+		$url .= $self->_get_filter."&";
+	}
+	if ($self->_get_select){
+		$url .= $self->_get_select."&";
+	}
+	$self->fetch_list($url, \@teams);
+	return  \@teams;
+	
+}#	}}}
 
+sub team_create {
+	my $self = shift;
+	my $team_info = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams";
+	my $result = $self->callAPI($url, 'POST', $team_info);
+	return $result;
 }
 
-sub archive_class {
+sub team_archive {
 	# Om gegevens verlies te voorkomen worden teams niet verwijdert maar gearchiveerd.
 	# Archiveren is een async operatie, duur een eeuwigheid, description daarom ook aan-
 	# passen zodat het archiveren direct duidelijk is en de group ook herkenbaar is als 
@@ -261,12 +180,60 @@ sub archive_class {
 		# dit is een PATCH
 		$url = $self->_get_graph_endpoint . "/v1.0/groups/$team_id";
 		my $payload = {
-			"description" => 'Archived_'.$team_naam
+			"description" => 'Archived_'.$team_naam,
+			"displayName" => 'Archived_'.$team_naam
 		};
 		my $result = $self->callAPI($url, 'PATCH', $payload);
-		print Dumper $result;
+		if ($result->is_success){
+			return "Ok";
+		}else{
+			return $result;
+		}
 	}
 }
+sub team_from_group{
+	my $self = shift;
+	my $group_id = shift;
+	say "Groep $group_id wordt een team";
+	my $payload = {
+		'template@odata.bind' => "https://graph.microsoft.com/v1.0/teamsTemplates('educationClass')",
+  		'group@odata.bind' => "https://graph.microsoft.com/v1.0/groups('$group_id')"
+
+	};
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams";
+	my $result = $self->callAPI($url, 'POST', $payload);
+	print Dumper $result;
+	if ($result->is_success){
+		return "Ok";
+	}else{
+		return "RC $result->{'_rc'}: $result->{'_content'}";
+	}
+}
+
+#
+# Class related
+#
+sub class_create {
+	my $self = shift;
+	my $class_info = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/education/classes";
+	my $result = $self->callAPI($url, 'POST', $class_info);
+	return $result;
+
+}
+
+sub classes_fetch{
+	my $self = shift;
+	my @classes;
+	my $url = $self->_get_graph_endpoint . "/v1.0/education/classes/?";
+	if ($self->_get_filter){
+		$url .= $self->_get_filter."&";
+	}
+	if ($self->_get_select){
+		$url .= $self->_get_select."&";
+	}
+	$self->fetch_list($url, \@classes);
+	return  \@classes;}
 
 
 __PACKAGE__->meta->make_immutable;
