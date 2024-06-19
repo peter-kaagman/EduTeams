@@ -57,6 +57,7 @@ has 'access_token'   => ( # {{{2
 	reader => '_get_access_token',
 	writer => '_set_access_token',
 ); #}}}
+# issue involved: https://github.com/peter-kaagman/EduTeams/issues/3
 has 'token_expires'   => ( # {{{2
 	is => 'rw', 
 	isa => 'Str',
