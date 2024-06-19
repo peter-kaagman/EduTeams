@@ -329,6 +329,7 @@ foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
     }
 }
 # Een team bestaat in Azure maar niet in Magister => team archiveren #7
+# Deze was tijden #8 al gecontroleerd en functioneerd goed
 foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
     # Om te archiveren is alleen het team id nodig
     say "Archiveren $Team2Archive";
