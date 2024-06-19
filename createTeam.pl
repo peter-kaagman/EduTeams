@@ -4,6 +4,10 @@
 # voor er een team van gemaakt kan worden.
 # Dit script (via cron?) periodiek uitvoeren
 #
+
+# TODO@peter-kaagman/issue{1}
+
+
 use strict;
 use warnings;
 use v5.11;

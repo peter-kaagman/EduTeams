@@ -54,7 +54,7 @@ my $groups_object = MsGroups->new(
     'select'        => '$select=id,displayName,description,mail',
 );
 
-
+# Create team
 sub createEduTeam {
     my $name = shift;
     my $description;
@@ -118,7 +118,7 @@ sub createEduTeam {
 sub AzureHash{
     $logger->make_log("$FindBin::Bin/$FindBin::Script Azure hash maken.");
 
-    my $qry = << "END_QRY";
+    my $qry = << "    END_QRY";
     Select
         azureteam.*,
         azuredocent.azureid As 'docent_azureid',
@@ -131,7 +131,7 @@ sub AzureHash{
     Left Join azuredocent           On azuredocrooster.azuredocent_id = azuredocent.ROWID
     Left Join azureleerlingrooster   On azureleerlingrooster.azureteam_id = azureteam.ROWID
     Left Join azureleerling         On azureleerlingrooster.azureleerling_id = azureleerling.ROWID
-END_QRY
+    END_QRY
     my $sth = $dbh->prepare($qry);
     $sth->execute();
     while (my $row = $sth->fetchrow_hashref()){
@@ -149,18 +149,18 @@ END_QRY
         #}else{
         #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'description'}. " heeft geen leerlingen");
         }
-}
-$sth->finish;
-#print Dumper $Azure;
-$logger->make_log("Aantal Azure teams: " . scalar keys %$Azure);
-$logger->make_log("$FindBin::Bin/$FindBin::Script Azure hash gemaakt.");
+    }
+    $sth->finish;
+    #print Dumper $Azure;
+    $logger->make_log("$FindBin::Bin/$FindBin::Script Aantal Azure teams: " . scalar keys %$Azure);
+    $logger->make_log("$FindBin::Bin/$FindBin::Script Azure hash gemaakt.");
 }
 
 # Magister hash
 sub MagisterHash {
     $logger->make_log("$FindBin::Bin/$FindBin::Script Magister hash maken.");
 
-    my $qry = << "END_QRY";
+    my $qry = << "    END_QRY";
     Select
         magisterteam.*,
         magisterdocent.azureid As 'azureid',
@@ -172,7 +172,7 @@ sub MagisterHash {
     Left Join magisterdocent            On magisterdocentenrooster.docentid = magisterdocent.ROWID
     Left Join magisterleerlingenrooster On magisterleerlingenrooster.teamid = magisterteam.ROWID
     Left Join magisterleerling          On magisterleerlingenrooster.leerlingid = magisterleerling.ROWID
-END_QRY
+    END_QRY
     my $sth = $dbh->prepare($qry);
     $sth->execute();
     while (my $row = $sth->fetchrow_hashref()){
@@ -190,7 +190,7 @@ END_QRY
     }
     $sth->finish;
     #print Dumper $Magister;
-    $logger->make_log("Aantal Magister teams: " . scalar keys %$Magister);
+    $logger->make_log("$FindBin::Bin/$FindBin::Script Aantal Magister teams: " . scalar keys %$Magister);
     $logger->make_log("$FindBin::Bin/$FindBin::Script Magister hash gemaakt.");
 }
 
@@ -284,7 +284,7 @@ sub AzureMagister{
                     }
                 }
                 # Leerlingen
-                print Dumper $azureteam->{'leerlingen'};
+                #print Dumper $azureteam->{'leerlingen'};
                 foreach my $azure_upn (keys %{$azureteam->{'leerlingen'}}){
                     if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_upn}){
                         say "LLn verwijderen uit $azurenaam => $azure_upn";
@@ -298,40 +298,52 @@ sub AzureMagister{
     $logger->make_log("$FindBin::Bin/$FindBin::Script Einde Azure vergelijking.");
 }
 
+# Gegeven verzamelen
 AzureHash(); # <= maak een hash van wat we weten vanuit Azure
-#print Dumper $Azure;
 MagisterHash(); # <= maak een hash van wat we weten vanuit Magister
-#print Dumper $Magister;
+
+#Vergelijkingen => ToDo hash maken
 MagisterAzure(); # Vergelijkt vanuit Magsiter gezien, koppelt terug in $ToDo maar wijzigt ook de AzureHash
 AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
+
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
 say "ToDo";
 print Dumper $ToDo if $ToDo;
-#exit 1;
-say "Azure";
-print Dumper $Azure;
-say "Magister";
-print Dumper $Magister;
+#exit 1; ## ff een dry run
+#
+# Vanaf hier gaan we mutaties uitvoeren
+#
 
-# Magister
-    # Archiveren
-    # MagisterMaken <= Een team staat in Magister maar niet in Azure
+# Een team bestaat in Magister maar niet in Azure => aanmaken of deactiveren #8
 foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
-    createEduTeam($NewClass);
+    # Als een team eerder gearchiveerd is om wat voor reden dan ook
+    # is zijn mailNickname prefixed met "Archived_" zodat hij niet in de
+    # lijst met aktieve teams komt. Controleren of dit het geval is
+    my $isArchived = $groups_object->team_is_archived($NewClass);
+    if($isArchived){
+        say "id is $isArchived, de-archiveren dus";
+        $groups_object->team_dearchive($isArchived, $NewClass);
+    }else{
+        say "aanmaken dus";
+        createEduTeam($NewClass);
+    }
 }
-    # MagisterDocentToevoegen
-    # MagisterLeerlingToevoegen
-
-# Azure
-    # AzureArchiverenNietInMagister <= Een team staat wel in Azure maar niet (meer) in Magister
+# Een team bestaat in Azure maar niet in Magister => team archiveren #7
 foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
     # Om te archiveren is alleen het team id nodig
+    say "Archiveren $Team2Archive";
     $groups_object->team_archive(
         $Azure->{$Team2Archive}->{'id'},
         $Team2Archive
     );
 }
-    # AzureLeerlingVerwijderen
+exit 1; # ff niet verder gaan
+
+
+# Een docent/lln staat bij een team in Magister maar niet in Azure => docent/lln toevoegen in Azure #9
+
+# Een docent/lln staat bij een team in Azure maar niet in Magister => docent/lln verwijderen #10
+## AzureLeerlingVerwijderen
 while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
     say "Lln verwijderen uit: $id";
     my $group_object = MsGroup->new(
@@ -349,7 +361,7 @@ while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}}))
         $group_object->team_removeMember($LlnId->{$lln_upn})
     }
 }  
-    # AzureDocentVerwijderen
+# AzureDocentVerwijderen
 while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
     say "Docent verwijderen uit: $id";
     my $group_object = MsGroup->new(
