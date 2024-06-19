@@ -38,7 +38,8 @@ Create Table If Not Exists magisterleerlingenrooster(
 Create Table If Not Exists azureteam(
     id Text Not Null Unique,
     description Text Not Null,
-    displayName Text Not Null
+    displayName Text Not Null,
+    secureName Text Not Null
 );
 -- Dit zijn docenten tijdens het ophalen gevonden in een bestaand team
 -- Als geen van de teams van een docent al bestaan

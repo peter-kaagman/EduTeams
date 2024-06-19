@@ -135,13 +135,12 @@ sub group_patch {
 #
 sub  team_members{
 	my $self = shift;
-	my $members;
+	my @members;
 	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id."/members/";
-	# negeer de select van de create object
-	$url .= '?$Select=userId,id,roles';
-	say "Fetching $url";
-	$self->fetch_list($url, $members);
-	return  $members;
+	#$url .= '?$Select=id,roles,'; # Ik kan geen select maken op userId, hoort niet bij het objecttype maar staat wel in het resultaat
+	$self->fetch_list($url, \@members);
+
+	return  \@members;
 }
 
 sub team_bulk_add_members {
@@ -174,14 +173,16 @@ sub team_channel_id {
 	$url .= '&$filter=displayName eq \'General\'';
 	#say $url;
 	my $result = $self->callAPI($url, 'GET');
-	if ($result->is_success){
-		my $content =  decode_json($result->decoded_content);
-		return $content->{'value'}[0]->{'id'};
-		#return (decode_json($result->{'value'}))[0]->{'id'};
-	}else{
-		print Dumper $result;
-		return 0;
-	}
+	return $result;
+	# if ($result->is_success){
+	# 	my $content =  decode_json($result->decoded_content);
+	# 	#return $content->{'value'}[0]->{'id'};
+
+	# 	#return (decode_json($result->{'value'}))[0]->{'id'};
+	# }else{
+	# 	#print Dumper $result;
+	# 	return $result;
+	# }
 }
 
 sub team_check_general {
@@ -190,18 +191,14 @@ sub team_check_general {
 	# Dit kun je na 5 minuten herstellen door een GetFilesFolder van General op te vragen.
 	# Om dit te kunnen doen heb je wel het ID van het kanaal general nodig
 	my $general_id = $self->team_channel_id('General');
-	if ($general_id){
+	if ($general_id->is_success){
 		my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id;
-		$url .= "/channels/$general_id/filesFolder";
+		$url .= "/channels/".(decode_json($general_id->decoded_content))->{'value'}[0]->{'id'}."/filesFolder";
 		my $result = $self->callAPI($url, 'GET');
 		print Dumper $result;
-		say $result->is_success;
-		# add a selectif needed, have in fact a select => see object creation
-		# $info = $self->callAPI($url, 'GET');
-		# return  decode_json($info->{'_content'});
-		return 1;
+		return $result;
 	}else{
-		return 0;
+		return $general_id;
 	}
 }
 #

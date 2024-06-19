@@ -6,3 +6,7 @@ Test met een niet bestaande gebruiker
 
 tokenLifeSpan => done
 Testen hoe lang een access_token meegaat en hoe herauthenticeren
+
+runFlag
+Als de sync draait dan mag createTeam niet uitgevoerd worden.
+De sync apps kunnen een flag zetten, liefst door een wrapper

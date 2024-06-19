@@ -173,6 +173,7 @@ sub callAPI { # {{{1
 	#print Dumper $r;
 	my $result = $ua->request($r);
 	#print Dumper $result;
+	#return $result->decoded_content;
 	return $result;
 } # }}}
 

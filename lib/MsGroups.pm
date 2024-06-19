@@ -36,11 +36,8 @@ sub groups_fetch { #	{{{1
 	}
 	if ($self->_get_select){
 		$url .= $self->_get_select."&";
-		# Fetch only 5 tops for debugging
-		#$url .= "&\$top=5";
 	}
-	#$url .= '$count=true';
-	say "Fetching $url";
+	#say "Fetching $url";
 	$self->fetch_list($url, \@groups);
 	return  \@groups;
 	

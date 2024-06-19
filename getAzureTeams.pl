@@ -62,7 +62,7 @@ my $sth_azureleerlingrooster = $dbh->prepare($qry);
 
 # azureteam
 $dbh->do('Delete From azureteam'); # Truncate the table 
-$qry = "Insert Into azureteam (id, description, displayName) values (?,?,?) ";
+$qry = "Insert Into azureteam (id, securename, description, displayName) values (?,?,?,?) ";
 my $sth_azureteam = $dbh->prepare($qry);
 
 my $groups_object = MsGroups->new(
@@ -71,7 +71,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	'filter'        => '$filter=startswith(mailNickname,\'Section_\')',
+	'filter'        => '$filter=startswith(mailNickname,\'Section_'.$config{'MAGISTER_LESPERIODE'}.'\')', # lesperiode in de select zodat alleen het huidige jaar opgehaald wordt
     'select'        => '$select=id,displayName,description,mailNickname',
 );
 
@@ -80,20 +80,20 @@ my $groups_object = MsGroups->new(
 # Geeft de ROWID terug
 sub getAzureDocentROWID {
     my $docent = shift;
-    if ($AzureDocenten->{$docent->{'userPrincipalName'}}){
+    if ($AzureDocenten->{$docent->{'email'}}){
         # docent gevonden => return ROWID
-        return $AzureDocenten->{$docent->{'userPrincipalName'}};
+        return $AzureDocenten->{$docent->{'email'}};
     }else{
         # Docent niet gevonden => aanmaken
         #my $qry = "Insert Into azuredocent (upn, azureid, naam) values (?,?,?) ";
         #print Dumper $docent;
         $sth_azuredocent->execute(
-            lc($docent->{'userPrincipalName'}), 
-            $docent->{'id'}, 
+            lc($docent->{'email'}), 
+            $docent->{'userId'}, 
             $docent->{'displayName'}
         );
         my $rowid =  $dbh->last_insert_id("","","azuredocent","ROWID");
-        $AzureDocenten->{$docent->{'userPrincipalName'}} = $rowid;
+        $AzureDocenten->{$docent->{'email'}} = $rowid;
         #say $rowid;
         #print Dumper $AzureDocenten;
         return $rowid;
@@ -103,90 +103,74 @@ sub getAzureDocentROWID {
 # Geeft de ROWID terug
 sub getAzureLeerlingROWID {
     my $leerling = shift;
-    if ($AzureLeerlingen->{$leerling->{'userPrincipalName'}}){
+    if ($AzureLeerlingen->{$leerling->{'email'}}){
         # leerling gevonden => return ROWID
-        return $AzureLeerlingen->{$leerling->{'userPrincipalName'}};
+        return $AzureLeerlingen->{$leerling->{'email'}};
     }else{
         # Leerling niet gevonden => aanmaken
         #print Dumper $docent;
         #my $qry = "Insert Into azuredocent (upn, azureid, naam) values (?,?,?) ";
         $sth_azureleerling->execute(
-            lc($leerling->{'userPrincipalName'}),
-            $leerling->{'id'},
+            lc($leerling->{'email'}),
+            $leerling->{'userIs'},
             $leerling->{'displayName'}
         );
         my $rowid =  $dbh->last_insert_id("","","azureleerling","ROWID");
-        $AzureLeerlingen->{$leerling->{'userPrincipalName'}} = $rowid;
+        $AzureLeerlingen->{$leerling->{'email'}} = $rowid;
         return $rowid;
     }
 }
 
-# Maakt een entry voor de groep, deze zal nooit bestaan.
+# Maakt een entry voor de groep.
 # Geeft de ROWID terug
 sub getAzureTeamROWID {
-    my $group = shift;
-    #$qry = "Insert Into azureteam (id, description, displayName) values (?,?,?) ";
-    $sth_azureteam->execute($group->{'id'},$group->{'description'},$group->{'displayName'});
+    my $team = shift;
+    #$qry = "Insert Into azureteam (id, securename,description, displayName) values (?,?,?,?) ";
+    $sth_azureteam->execute($team->{'id'},$team->{'secureName'},$team->{'description'},$team->{'displayName'});
     return $dbh->last_insert_id("","","azureteam","ROWID");
 }
 
 if ($groups_object->_get_access_token){
     # Eerst de classes ophalen in Graph
 	my $teams = $groups_object->groups_fetch();
-    say "Alle groepen";
-    print Dumper $teams;
-
-	while (my ($i, $team) = each @{$teams}){
-        
-        # Normalize description, in sommige gevallen staat de LOC ervoor
-        # Dit voorkomt ook dat ik kan filteren op description
-        $team->{'description'} =~ s/.+\w\w\w\s(.+)/$1/;
-        # Alleen de huidige lesperiode
-        if ($team->{'description'} =~ /^$config{'MAGISTER_LESPERIODE'}/){
-            # In de eerste stap worden "teams" gezocht op 
-            $logger->make_log("$FindBin::Bin/$FindBin::Script Team gevonden: ". $team->{description});
-            my $azureteamROWID = getAzureTeamROWID($team);
-            # Object maken voor deze groep met het doel owers en leden op te halen
-            my $group_object = MsGroup->new(
-                'app_id'        => $config{'APP_ID'},
-                'app_secret'    => $config{'APP_PASS'},
-                'tenant_id'     => $config{'TENANT_ID'},
-                'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-                'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-                'access_token'  => $groups_object->_get_access_token, # hergebruik het token
-                'select'        => '$select=id,displayName,userPrincipalName',
-                'id'            => $team->{'id'},
-            );
-            # Member ophalen van het team
-            my $members = $group_object->team_members();
-            print Dumper $members;
-            # # Eigenaren (docenten ophalen)
-            # my $owners = $group_object->fetch_owners();
-            # foreach my $owner (@$owners){
-            #     #print Dumper $owner;
-            #     my $azuredocentROWID = getAzureDocentROWID($owner);
-            #     # RowId docent en team is bekend => toevoegen aan het rooster
-            #     $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID)
-            # }
-
-            # # Leden (leerlingen ophalen)
-            # my $members = $group_object->fetch_members();
-            # # $members is een AOH
-            # foreach my $member (@$members){
-            #     # NB Docenten zijn zelf ook lid, deze dus overslaan
-            #     if (lc($member->{'userPrincipalName'}) =~ /^b[0-9]{6}.*/){  # UPN begint met een b nummer
-            #         $logger->make_log("$FindBin::Bin/$FindBin::Script Leerling gevonden:".$member->{'displayName'});
-            #         my $azureleerlingROWID = getAzureLeerlingROWID($member);
-            #         # RowId leerling en team is bekend => toevoegen aan het rooster
-            #         $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
-            #     }
-            # }
+#	while (my ($i, $team) = each @{$teams}){
+	foreach my $team (@{$teams}){
+        # description en displayName kunnen aangepast zijn, naam halen uit de mailNick
+        $team->{'mailNickname'} =~ /^Section_($config{'MAGISTER_LESPERIODE'}.+)/;
+        $team->{'secureName'} = $1;
+        $logger->make_log("$FindBin::Bin/$FindBin::Script Team gevonden: ". $team->{'secureName'});
+        # Registreren in azureteams, team zal nog niet bestaan
+        my $azureteamROWID = getAzureTeamROWID($team);
+        # Object maken voor deze groep met het doel owers en leden op te halen
+        my $group_object = MsGroup->new(
+            'app_id'        => $config{'APP_ID'},
+            'app_secret'    => $config{'APP_PASS'},
+            'tenant_id'     => $config{'TENANT_ID'},
+            'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+            'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+            'access_token'  => $groups_object->_get_access_token, # hergebruik het token
+            'token_expires' => $groups_object->_get_token_expires,
+            'select'        => '$select=id,displayName,userPrincipalName',
+            'id'            => $team->{'id'},
+        );
+        # Member ophalen van het team
+        my $members = $group_object->team_members();
+        foreach my $member (@{$members}){
+            #print Dumper $member;
+            #my $roles = decode_json($member=>{'roles'});
+            if ($member->{'roles'}[0]){
+                my $azuredocentROWID = getAzureDocentROWID($member);
+                # ROWID van docent en team is bekend => toevoegen aan azuredocrooster
+                # $qry = "Insert Into azuredocrooster (azureteam_id,azuredocent_id) values (?,?) ";
+                $sth_azuredocrooster->execute($azureteamROWID,$azuredocentROWID);
+            }else{
+                my $azureleerlingROWID = getAzureLeerlingROWID($member);
+                # ROWID van lln en team is bekend => toevoegen aan azureleerlingrooster
+                # $qry = "Insert Into azureleerlingrooster (azureteam_id,azureleerling_id) values (?,?) ";
+                $sth_azureleerlingrooster->execute($azureteamROWID,$azureleerlingROWID);
+            }
         }
 	}
-    # say "No Owner:";
-    # print Dumper \@retryOwner;
-    # say "No member:";
-    # print Dumper \@retryMember;
 }else{
 	$logger->make_log("$FindBin::Bin/$FindBin::Script No token!");
 }

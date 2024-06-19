@@ -43,7 +43,13 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
     or die $DBI::errstr;    
 
 my $sth_azureleerling = $dbh->prepare("Insert Into azureleerling  (upn, azureid, naam) values (?,?,'van create team')");
-
+# Een hash om lln id's te bewaren, indexed op UPN
+# Er is een tabel AzureLeerlingen, daar kunnen al gegevens in staan, scheelt weer requests
+my $sth = $dbh->prepare("Select upn,azureid From azureleerling");
+$sth->execute;
+my $lln_by_upn = $sth->fetchall_hashref('upn');
+$sth->execute;
+my $lln_by_id = $sth->fetchall_hashref('azureid');
 
 my $groups_object = MsGroups->new(
     'app_id'        => $config{'APP_ID'},
@@ -66,12 +72,7 @@ my $user_object = MsUser->new(
     'token_expires' => $groups_object->_get_token_expires,
     'select'        => '$select=id,displayName,description,mail',
 );
-# Een hash om lln id's te bewaren, indexed op UPN
-my ($lln_by_upn, $lln_by_id);
-# Er is een tabel AzureLeerlingen, daar kunnen al gegevens in staan, scheelt weer requests
-my $sth = $dbh->prepare("Select upn,azureid From azureleerling");
-$lln_by_upn = $sth->fetchall_hashref('upn');
-$lln_by_id = $sth->fetchall_hashref('azureid');
+
 
 # Eens kijken of er iets te doen is
 $sth = $dbh->prepare('Select ROWID,* From teamcreated');
@@ -178,8 +179,9 @@ while(my $row = $sth->fetchrow_hashref()){
                 my $leden = decode_json($row->{'members'});
                 if (%{$leden}){
                     # Members toevoegen met conversationMember: add (bulbk)
-                    # Voordeel: members toevoegen met UPN of ID
+                    # Voordeel: members toevoegen met UPN of ID, niet echt een voordeel => rapport komt op id
                     # Nadeel: maximaal 200 member
+                    print Dumper $leden;
                     my $members;
                     say "Leden toevoegen";
                     foreach my $upn (keys %{$leden}){
@@ -195,12 +197,11 @@ while(my $row = $sth->fetchrow_hashref()){
                             $lln_id = $user_object->fetch_id_by_upn($upn);
                             $lln_by_upn->{$upn}->{'azureid'} = $lln_id;
                             $lln_by_id->{$lln_id}->{'upn'} = $upn;
-
                             # ook ff terugschrijven naar azureleerling
                             if ($lln_id ne 'onbekend'){
+                                say "$upn => $lln_id";
                                 $sth_azureleerling->execute($upn,$lln_id);
                             }
-
                         }                    
                         if ($lln_id ne 'onbekend'){ # het is mogelijk dat een lln in Magister niet in Azure staat
                             my $user = {
@@ -243,9 +244,10 @@ while(my $row = $sth->fetchrow_hashref()){
                 # Dit kun je na 5 minuten herstellen door een GetFilesFolder van General op te vragen.
                 my $result = $group_object->team_check_general;
                 if ($result->is_success){
+                    $logger->make_log("$FindBin::Bin/$FindBin::Script INFO General channel van $row->{'naam'} is gecontroleerd en ok");
                     $dbh->do("Update teamcreated Set general_checked = 1 Where ROWID = $row->{'rowid'}");
                 }else{
-                    $logger->make_log("$FindBin::Bin/$FindBin::Script  WARNING Probleem met general channel van $row->{'naam'}".encode_json($result));
+                    $logger->make_log("$FindBin::Bin/$FindBin::Script WARNING Probleem met general channel van $row->{'naam'}".encode_json($result));
                 }
             }else{
                 $logger->make_log("$FindBin::Bin/$FindBin::Script  WARNING Kan geen ID ophalen voor $row->{'naam'}");
