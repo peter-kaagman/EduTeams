@@ -68,6 +68,7 @@ sub BUILD{ #	{{{1
 	);
 
 	my $result = $ua->request($r);
+	#print Dumper $result;
 	if ($result->is_success){
 		if ($result->content =~ /.+SessionToken">(.+)<\/td>.+/) {
 			$self->_set_access_token($1);
@@ -110,22 +111,31 @@ sub getDocenten {
 	#$url .= "/?library=ADFuncties&function=GetActiveEmpoyees&Type=CSV&SessionToken=".$self->_get_access_token;
 	$url .= "/?library=Data&function=GetData&Layout=SDS-Medewerker&Type=CSV&SessionToken=".$self->_get_access_token;
 	my $result = callAPI($url);
-	my $docenten = csv(
-		in => \$result->content,
-		headers => "auto",
-		sep_char => ";",
-		encoding => "UTF-8"
-	);
-	my $reply;
-	foreach my $docent (@$docenten){
-		#print Dumper $docent;
-		$reply->{$docent->{"\x{feff}Stamnr"}}->{'naam'} 		= $docent->{'Volledige_naam'};
-		$reply->{$docent->{"\x{feff}Stamnr"}}->{'upn'} 			= $docent->{'Email_werk'};
-	};	
-	return $reply;
+	if ($result->is_success){
+		my $docenten = csv(
+			in => \$result->content,
+			headers => "auto",
+			sep_char => ";",
+			encoding => "UTF-8"
+		);
+		my $reply;
+		foreach my $docent (@$docenten){
+			#print Dumper $docent;
+			#13 hash omgeboud naar index op upn
+			# Uit dienst wordt aangegeven door een sterrje voor de 3-letter code
+			# Email_werk zou de UPN moeten zijn
+			my $upn = lc($docent->{'Email_werk'});
+			$reply->{$upn}->{'naam'}	= $docent->{'Volledige_naam'};
+			$reply->{$upn}->{'stamnr'}	= $docent->{"\x{feff}Stamnr"};
+		};	
+		return $reply;
+	}else{
+		print Dumper $result;
+	}
 }
 
 #https://[url]/?library=ADFuncties&function=GetActiveStudents&SessionToken=[SessionToken]&LesPeriode=[LesPeriode] &Type=[HTML/XML/CSV/TAB]
+#ToDo Hier wordt het koppelveld gemaakt tussen Magister en Azure, deze met de tijd configureerbaar maken
 sub getLeerlingen {
 	my $self = shift;
 	my $url = $self->_get_endpoint;
@@ -141,11 +151,17 @@ sub getLeerlingen {
 	my $reply;
 	foreach my $lln (@$leerlingen){
 		#print Dumper $lln;
-		$reply->{$lln->{"\x{feff}stamnr_str"}}->{'naam'} 		= $lln->{'Volledige_naam'};
-		$reply->{$lln->{"\x{feff}stamnr_str"}}->{'klas'} 		= $lln->{'Klas'};
-		$reply->{$lln->{"\x{feff}stamnr_str"}}->{'studie'} 	= $lln->{'Studie'};
-		$reply->{$lln->{"\x{feff}stamnr_str"}}->{'b_nummer'} 	= lc($lln->{'Loginaccount.Naam'});
-		$reply->{$lln->{"\x{feff}stamnr_str"}}->{'locatie'} 	= $lln->{'Administratieve_eenheid.Omschrijving'};
+		# Fabriceer een UPN, deze kan best ongeldig zijn.
+		my $upn = lc($lln->{'Loginaccount.Naam'}).'@atlascollege.nl';
+		$reply->{$upn}->{'naam'}	= $lln->{'Volledige_naam'};
+		$reply->{$upn}->{'studie'}	= $lln->{'Studie'};
+		$reply->{$upn}->{'stamnr'}	= $lln->{"\x{feff}stamnr_str"};
+		$reply->{$upn}->{'klas'}	= $lln->{'Klas'};
+		# Rest van de data wordt nergens gebruikt
+		#$reply->{$lln->{"\x{feff}stamnr_str"}}->{'naam'} 		= $lln->{'Volledige_naam'};
+		#$reply->{$lln->{"\x{feff}stamnr_str"}}->{'studie'} 	= $lln->{'Studie'};
+		#$reply->{$lln->{"\x{feff}stamnr_str"}}->{'b_nummer'} 	= lc($lln->{'Loginaccount.Naam'});
+		#$reply->{$lln->{"\x{feff}stamnr_str"}}->{'locatie'} 	= $lln->{'Administratieve_eenheid.Omschrijving'};
 		# $reply->{$docent->{"\x{feff}stamnr_str"}}->{'inlogcode'} 	= lc($docent->{'Code'});
 		# $reply->{$docent->{"\x{feff}stamnr_str"}}->{'locatie'}		= $docent->{'Administratieve_eenheid.Omschrijving'};
 		# $reply->{$docent->{"\x{feff}stamnr_str"}}->{'rol'} 			= $docent->{'Functie.Omschr'};

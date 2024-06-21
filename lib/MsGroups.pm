@@ -11,20 +11,7 @@ use Data::Dumper;
 extends 'MsGraph';
 
 # Attributes {{{1
-has 'filter'         => ( # {{{2
-	is => 'rw', 
-	isa => 'Maybe[Str]', 
-	required => '0',
-	reader => '_get_filter',
-	writer => '_set_filter',
-); #}}}
-has 'select'         => ( # {{{2
-	is => 'rw', 
-	isa => 'Maybe[Str]', 
-	required => '0',
-	reader => '_get_select',
-	writer => '_set_select',
-); #}}}
+
 # }}}
 
 sub groups_fetch { #	{{{1

@@ -57,6 +57,20 @@ has 'access_token'   => ( # {{{2
 	reader => '_get_access_token',
 	writer => '_set_access_token',
 ); #}}}
+has 'filter'         => (
+	is => 'rw', 
+	isa => 'Maybe[Str]', 
+	required => '0',
+	reader => '_get_filter',
+	writer => '_set_filter',
+);
+has 'select'         => ( 
+	is => 'rw', 
+	isa => 'Maybe[Str]', 
+	required => '0',
+	reader => '_get_select',
+	writer => '_set_select',
+); 
 # issue involved: https://github.com/peter-kaagman/EduTeams/issues/3
 has 'token_expires'   => ( # {{{2
 	is => 'rw', 
@@ -183,6 +197,7 @@ sub fetch_list {
 	my $url = shift;							# get the URL from the function call
 	my $found = shift;							# get the array reference which holds the result
 	my $result = $self->callAPI($url, 'GET');	# do_fetch calls callAPI to do the HTTP request
+	#print Dumper $result;
 	# Process if rc = 200
 	if ($result->is_success){
 		my $reply =  decode_json($result->decoded_content);
