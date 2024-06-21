@@ -18,20 +18,7 @@ has 'id' => (
 	reader => '_get_id',
 	writer => '_set_id',
 ); #}}}
-has 'filter'         => (
-	is => 'rw', 
-	isa => 'Maybe[Str]', 
-	required => '0',
-	reader => '_get_filter',
-	writer => '_set_filter',
-);
-has 'select'         => ( 
-	is => 'rw', 
-	isa => 'Maybe[Str]', 
-	required => '0',
-	reader => '_get_select',
-	writer => '_set_select',
-); 
+
 
 #
 # Group related

@@ -23,7 +23,7 @@ my $logger = Logger->new(
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/../config/EduTeamsTest.cfg", \%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/../config/EduTeams.cfg", \%config) or die("No config: $!");
 #print Dumper \%config; exit 0;
 
 my $driver = $config{'DB_DRIVER'};
@@ -64,72 +64,11 @@ while (my $row = $sth->fetchrow_hashref()){
 }
 #print Dumper $TeamsHoH;
 
-# docent
-#$dbh->do('Delete From magisterdocent'); # Truncate the table
-$qry = "Insert Into magisterdocent (stamnr, upn, naam, azureid) values (?,?,?,?) ";
-my $sth_magisterdocent = $dbh->prepare($qry);
-my $DocentenHoH; # ipv zoeken in de database
-# De zoekhash ff vullen
-$sth = $dbh->prepare('Select rowid, stamnr From magisterdocent');
-$sth->execute();
-while (my $row = $sth->fetchrow_hashref()){
-    $DocentenHoH->{$row->{'stamnr'}} = $row->{'rowid'};
-}
-#rint Dumper $DocentenHoH;
-
-# leerling
-#$dbh->do('Delete From magisterleerling'); # Truncate the table
-$qry = "Insert Into magisterleerling (stamnr, b_nummer, upn, naam) values (?,?,?,?) ";
-my $sth_magisterleerling = $dbh->prepare($qry);
-my $LeerlingenHoH; # ipv zoeken in de database
-# De zoekhash ff vullen
-$sth = $dbh->prepare('Select rowid, stamnr From magisterleerling');
-$sth->execute();
-while (my $row = $sth->fetchrow_hashref()){
-    $LeerlingenHoH->{$row->{'stamnr'}} = $row->{'rowid'};
-}
-#rint Dumper $LeerlingenHoH;
-
-# Maakt een entry voor de docent
-# Geeft de ROWID terug
-# Docent wordt pas aangemaakt indien er een aktieve groep gevonden is, de docent kan dus al bestaan
-sub getMagisterDocentROWID {
-    my $stamnr = shift;
-    my $docent = shift;
-    #say "Op zoek naar een ROWID voor $stamnr";
-    if ($DocentenHoH->{$stamnr}){
-        return $DocentenHoH->{$stamnr};
-    }else{
-        my $azureid = getAzureId(lc($docent->{'upn'}));
-        if ($azureid ne 'onbekend'){
-            # $qry = "Insert Into magisterdocent (stamnr, upn, naam, azureid) values (?,?,?,?) ";
-            $sth_magisterdocent->execute($stamnr, ,$docent->{'upn'},$docent->{'naam'},$azureid);
-            my $ROWID =  $dbh->last_insert_id("","","magisterdocent","ROWID");
-            $DocentenHoH->{$stamnr} = $ROWID;
-            return $ROWID; 
-        }else{
-            return 'onbekend';
-        }
-    }
-}
-
-# Maakt een entry voor de leerling
-# Geeft de ROWID terug
-# Leerling heeft verschillende groepen en komt dus meerdere keren voor
-sub getMagisterLeerlingROWID {
-    my $stamnr = shift;
-    my $leerling = shift;
-    if ($LeerlingenHoH->{$stamnr}){
-        return $LeerlingenHoH->{$stamnr};
-    }else{
-        my $upn = $leerling->{'b_nummer'}.'@atlascollege.nl';
-        #$qry = "Insert Into magisterleerling (stamnr, b_nummer, upn, naam) values (?,?,?,?) ";
-        $sth_magisterleerling->execute($stamnr, lc($leerling->{'b_nummer'}),lc($upn),$leerling->{'naam'});
-        my $ROWID =  $dbh->last_insert_id("","","magisterleerling","ROWID");
-        $LeerlingenHoH->{$stamnr} = $ROWID;
-        return $ROWID; 
-    }
-}
+# Users
+# Users dient als zoek hash 
+my $sth_users = $dbh->prepare("Select azureid,upn,ROWID From users");
+$sth_users->execute();
+my $usersByUpn = $sth_users->fetchall_hashref('upn');
 
 # Maakt een entry voor de groep als die nog niet bestaat
 # Een groep kan toegewezen zijn aan verschillende docenten, kan dus al bestaan
@@ -155,25 +94,28 @@ sub getMagisterTeamROWID {
 #
 # Einde afhankelijkheid
 
-# Een jaarlaag wordt gebasseerd op geldige groepen in Magister.
-# Dwz dat de groepen docenten en leerlingen moeten hebben.
-# Van een groep zonder leerlingen worden de lln dus niet toegevoegd
-my $json = read_file("$FindBin::Bin/../config/".$config{'JAARLAGEN'}, { binmode => ':raw'});
-my $jaarlagen = decode_json $json;
-print Dumper $jaarlagen;
 
 
 sub jaarLagen {
+    #say "Sub jaarlagen";
+    # Een jaarlaag wordt gebasseerd op geldige groepen in Magister.
+    # Dwz dat de groepen docenten en leerlingen moeten hebben.
+    # Van een groep zonder leerlingen worden de lln dus niet toegevoegd
+    my $json = read_file("$FindBin::Bin/../config/".$config{'JAARLAGEN'}, { binmode => ':raw'});
+    my $jaarlagen = decode_json $json;
+    #print Dumper $jaarlagen;
     my $sth_docentenzoeken = $dbh->prepare("Select docentid From magisterdocentenrooster Where teamid = ?");      # docenten zoeken van een team
     my $sth_leerlingenzoeken = $dbh->prepare("Select leerlingid From magisterleerlingenrooster Where teamid = ?");# leerlingen zoeken van een team
     my $sth = $dbh->prepare('Select * From magisterteam Where naam Like ?');    # zoek een team op naam
     
     # De hash jaarlagen doorlopen
     while (my($search,$jaarlaag_naam) = each (%{$jaarlagen})){
-        say "$search => $jaarlaag_naam";
         # Zoek de teams die aan het filter voldoen (lesperiode toevoegen)
-        $sth->execute($config{'MAGISTER_LESPERIODE'}.'-'.$search);
+        #say "Zoeken naar ".$config{'MAGISTER_LESPERIODE'}.'-'.$search;
+        $sth->execute( $config{'MAGISTER_LESPERIODE'}.'-'.$search );
         my $teams = $sth->fetchall_hashref('naam'); # gevonden teams ff in een hash zetten
+        #say "gevonden";
+        print Dumper $teams;
         # doorloop de gevonden teams
         while (my ($naam, $team) = each(%{$teams})){ 
             # ROWID ophalen voor de jaarlaag, dit voegt hem zonodig toe aan de tabel
