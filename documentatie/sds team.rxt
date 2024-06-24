@@ -1,0 +1,236 @@
+# SDS created team
+## classes
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#education/classes/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET education/classes('<guid>')?$select=classCode,course",
+    "id": "cd009172-485f-465d-ab30-e553b4bb2729",
+    "description": "2324-0h5.lo3",
+    "displayName": "2324-0h5.lo3",
+    "mailNickname": "Section_10000021957",
+    "externalName": "2324-0h5.lo3",
+    "externalId": "10000021957",
+    "externalSource": "sis",
+    "externalSourceDetail": "SIS",
+    "course": {
+        "displayName": "2324-0h5.lo3",
+        "externalId": "10000021957"
+    }
+}
+
+## teams
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#teams/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET teams('<guid>')?$select=classification,createdDateTime",
+    "id": "cd009172-485f-465d-ab30-e553b4bb2729",
+    "createdDateTime": "2023-08-30T10:31:38.737Z",
+    "displayName": "2324-0h5.lo3",
+    "description": "2324-0h5.lo3",
+    "internalId": "19:pcM4HVE3afyY-0W2fXlvENGQWfLsUbt30bfnFABuYAQ1@thread.tacv2",
+    "classification": null,
+    "specialization": "educationClass",
+    "visibility": "hiddenMembership",
+    "webUrl": "https://teams.microsoft.com/l/team/19%3apcM4HVE3afyY-0W2fXlvENGQWfLsUbt30bfnFABuYAQ1%40thread.tacv2/conversations?groupId=cd009172-485f-465d-ab30-e553b4bb2729&tenantId=dcf79e11-dd92-44c3-881f-3c407591ab4a",
+    "isArchived": false,
+    "isMembershipLimitedToOwners": false,
+    "discoverySettings": {
+        "showInTeamsSearchAndSuggestions": false
+    },
+    "memberSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowCreatePrivateChannels": false,
+        "allowDeleteChannels": false,
+        "allowAddRemoveApps": false,
+        "allowCreateUpdateRemoveTabs": false,
+        "allowCreateUpdateRemoveConnectors": false
+    },
+    "guestSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowDeleteChannels": false
+    },
+    "messagingSettings": {
+        "allowUserEditMessages": true,
+        "allowUserDeleteMessages": true,
+        "allowOwnerDeleteMessages": true,
+        "allowTeamMentions": true,
+        "allowChannelMentions": true
+    },
+    "funSettings": {
+        "allowGiphy": true,
+        "giphyContentRating": "strict",
+        "allowStickersAndMemes": true,
+        "allowCustomMemes": true
+    },
+    "summary": {
+        "ownersCount": 1,
+        "membersCount": 29,
+        "guestsCount": 0
+    }
+}
+
+## groups
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#teams/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET teams('<guid>')?$select=classification,createdDateTime",
+    "id": "cd009172-485f-465d-ab30-e553b4bb2729",
+    "createdDateTime": "2023-08-30T10:31:38.737Z",
+    "displayName": "2324-0h5.lo3",
+    "description": "2324-0h5.lo3",
+    "internalId": "19:pcM4HVE3afyY-0W2fXlvENGQWfLsUbt30bfnFABuYAQ1@thread.tacv2",
+    "classification": null,
+    "specialization": "educationClass",
+    "visibility": "hiddenMembership",
+    "webUrl": "https://teams.microsoft.com/l/team/19%3apcM4HVE3afyY-0W2fXlvENGQWfLsUbt30bfnFABuYAQ1%40thread.tacv2/conversations?groupId=cd009172-485f-465d-ab30-e553b4bb2729&tenantId=dcf79e11-dd92-44c3-881f-3c407591ab4a",
+    "isArchived": false,
+    "isMembershipLimitedToOwners": false,
+    "discoverySettings": {
+        "showInTeamsSearchAndSuggestions": false
+    },
+    "memberSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowCreatePrivateChannels": false,
+        "allowDeleteChannels": false,
+        "allowAddRemoveApps": false,
+        "allowCreateUpdateRemoveTabs": false,
+        "allowCreateUpdateRemoveConnectors": false
+    },
+    "guestSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowDeleteChannels": false
+    },
+    "messagingSettings": {
+        "allowUserEditMessages": true,
+        "allowUserDeleteMessages": true,
+        "allowOwnerDeleteMessages": true,
+        "allowTeamMentions": true,
+        "allowChannelMentions": true
+    },
+    "funSettings": {
+        "allowGiphy": true,
+        "giphyContentRating": "strict",
+        "allowStickersAndMemes": true,
+        "allowCustomMemes": true
+    },
+    "summary": {
+        "ownersCount": 1,
+        "membersCount": 29,
+        "guestsCount": 0
+    }
+}
+
+# EduTeams created team
+## Classes
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#education/classes/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET education/classes('<guid>')?$select=classCode,course",
+    "id": "19f47b6d-5c8f-40c0-b78f-d8913dd51884",
+    "description": "2324-0Test2.xyz",
+    "displayName": "2324-0Test2.xyz",
+    "mailNickname": "Section_2324-0Test2.xyz"
+}
+
+## team{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#teams/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET teams('<guid>')?$select=classification,createdDateTime",
+    "id": "19f47b6d-5c8f-40c0-b78f-d8913dd51884",
+    "createdDateTime": "2024-06-18T12:26:25.411Z",
+    "displayName": "2324-0Test2.xyz",
+    "description": "2324-0Test2.xyz",
+    "internalId": "19:XCNsRHVCr2jHaujSbzhxKgnKJFMwke5mSWTY__SMOrU1@thread.tacv2",
+    "classification": null,
+    "specialization": "educationClass",
+    "visibility": "hiddenMembership",
+    "webUrl": "https://teams.microsoft.com/l/team/19%3aXCNsRHVCr2jHaujSbzhxKgnKJFMwke5mSWTY__SMOrU1%40thread.tacv2/conversations?groupId=19f47b6d-5c8f-40c0-b78f-d8913dd51884&tenantId=996a2b40-47ec-4555-9bde-9e1a368182e4",
+    "isArchived": false,
+    "isMembershipLimitedToOwners": false,
+    "discoverySettings": {
+        "showInTeamsSearchAndSuggestions": false
+    },
+    "memberSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowCreatePrivateChannels": false,
+        "allowDeleteChannels": false,
+        "allowAddRemoveApps": false,
+        "allowCreateUpdateRemoveTabs": false,
+        "allowCreateUpdateRemoveConnectors": false
+    },
+    "guestSettings": {
+        "allowCreateUpdateChannels": false,
+        "allowDeleteChannels": false
+    },
+    "messagingSettings": {
+        "allowUserEditMessages": true,
+        "allowUserDeleteMessages": true,
+        "allowOwnerDeleteMessages": true,
+        "allowTeamMentions": true,
+        "allowChannelMentions": true
+    },
+    "funSettings": {
+        "allowGiphy": true,
+        "giphyContentRating": "strict",
+        "allowStickersAndMemes": true,
+        "allowCustomMemes": true
+    },
+    "summary": {
+        "ownersCount": 1,
+        "membersCount": 4,
+        "guestsCount": 0
+    }
+}
+
+## groups
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups/$entity",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET groups('<guid>')?$select=assignedLabels,assignedLicenses",
+    "id": "19f47b6d-5c8f-40c0-b78f-d8913dd51884",
+    "deletedDateTime": null,
+    "classification": null,
+    "createdDateTime": "2024-06-18T12:26:24Z",
+    "creationOptions": [
+        "Team",
+        "classAssignments",
+        "ExchangeProvisioningFlags:2509"
+    ],
+    "description": "2324-0Test2.xyz",
+    "displayName": "2324-0Test2.xyz",
+    "expirationDateTime": null,
+    "groupTypes": [
+        "Unified"
+    ],
+    "isAssignableToRole": null,
+    "mail": "Section_2324-0Test2.xyz@ict-atlascollege.nl",
+    "mailEnabled": true,
+    "mailNickname": "Section_2324-0Test2.xyz",
+    "membershipRule": null,
+    "membershipRuleProcessingState": null,
+    "onPremisesDomainName": null,
+    "onPremisesLastSyncDateTime": null,
+    "onPremisesNetBiosName": null,
+    "onPremisesSamAccountName": null,
+    "onPremisesSecurityIdentifier": null,
+    "onPremisesSyncEnabled": null,
+    "preferredDataLocation": null,
+    "preferredLanguage": null,
+    "proxyAddresses": [
+        "SPO:SPO_07318568-d1e0-416e-b6fe-b5944e45a94c@SPO_996a2b40-47ec-4555-9bde-9e1a368182e4",
+        "smtp:Section_2324-0Test2.xyz@ICTAtlasCollege.onmicrosoft.com",
+        "SMTP:Section_2324-0Test2.xyz@ict-atlascollege.nl"
+    ],
+    "renewedDateTime": "2024-06-18T12:26:24Z",
+    "resourceBehaviorOptions": [
+        "HideGroupInOutlook",
+        "WelcomeEmailDisabled",
+        "ConnectorsDisabled",
+        "SubscribeNewGroupMembers"
+    ],
+    "resourceProvisioningOptions": [
+        "Team"
+    ],
+    "securityEnabled": false,
+    "securityIdentifier": "S-1-12-1-435452781-1086348431-2446888887-2216219965",
+    "theme": null,
+    "uniqueName": null,
+    "visibility": "HiddenMembership",
+    "extension_fe2174665583431c953114ff7268b7b3_Education_ObjectType": "Section",
+    "onPremisesProvisioningErrors": [],
+    "serviceProvisioningErrors": []
+}

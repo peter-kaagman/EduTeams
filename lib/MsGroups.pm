@@ -164,10 +164,11 @@ sub team_archive {
 		# archiveren is geslaagd => description aanpassen
 		# dit is een PATCH
 		$url = $self->_get_graph_endpoint . "/v1.0/groups/$team_id";
+		# ToDo: Dit is een module en er staat EduTeam => niet generiek
 		my $payload = {
 			"description" => 'Archived_'.$team_naam,
 			"displayName" => 'Archived_'.$team_naam,
-			"mailNickname"=> 'Archived_Section_'.$team_naam,
+			"mailNickname"=> 'Archived_EduTeam_'.$team_naam,
 		};
 		my $result = $self->callAPI($url, 'PATCH', $payload);
 		if ($result->is_success){
@@ -195,7 +196,7 @@ sub team_dearchive {
 		my $payload = {
 			"description" => $team_naam,
 			"displayName" => $team_naam,
-			"mailNickname"=> 'Section_'.$team_naam,
+			"mailNickname"=> 'EduTeam_'.$team_naam,
 		};
 		my $result = $self->callAPI($url, 'PATCH', $payload);
 		if ($result->is_success){
@@ -211,7 +212,8 @@ sub team_is_archived {
 	my $team_naam = shift;
 	my $url = $self->_get_graph_endpoint . "/v1.0/groups";
 	$url .= '?$select=id';
-	$url .= "&\$filter=mailNickname eq 'Archived_Section_$team_naam'";
+	# ToDo Dit is een module => EduTeam hier noemen is niet generiek
+	$url .= "&\$filter=mailNickname eq 'Archived_EduTeam,_$team_naam'";
 	my $result = $self->callAPI($url, 'GET');
 	if ($result->is_success){
 		my $content = decode_json($result->decoded_content);

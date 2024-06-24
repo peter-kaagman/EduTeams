@@ -1,4 +1,6 @@
--- #13
+-- 
+-- Users
+--
 Create Table If Not Exists users(
     azureid Text Unique Not Null,
     upn Text Unique Not Null,
@@ -6,6 +8,9 @@ Create Table If Not Exists users(
     naam Text
 );
 
+--
+-- Magister
+--
 Create Table If Not Exists magisterteam(
     naam Text Not Null Unique,
     type Text 
@@ -31,6 +36,9 @@ Create Table If Not Exists magisterleerlingenrooster(
     Foreign Key (teamid) References magisterteam(ROWID)
 );
 
+--
+-- Azure
+--
 Create Table If Not Exists azureteam(
     id Text Not Null Unique,
     description Text Not Null,

@@ -80,12 +80,12 @@ group info: https://graph.microsoft.com/v1.0/groups/some_id
 id: bevat de graph identifier
 description: bevat de originele section naam
 displayName: is de naam die de docent kan instellen
-mail : begint met Section_, hieraan kun je een SDS team dus herkennen, mail kan gebruikt worden in een filter (https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0)
+mail : begint met EduTeam_, hieraan kun je een SDS team dus herkennen, mail kan gebruikt worden in een filter (https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0)
 
 
 https://learn.microsoft.com/en-us/graph/filter-query-parameter?tabs=http geeft filter voorbeelden
-https://graph.microsoft.com/v1.0/groups/?$filter=startswith(mail,'Section_')
-Geeft alle groepen waarvan mail begint met "Section_", echter ook groepen van niet relevante studiejaren => ALLE SDS teams
+https://graph.microsoft.com/v1.0/groups/?$filter=startswith(mail,'EduTeam_')
+Geeft alle groepen waarvan mail begint met "EduTeam_", echter ook groepen van niet relevante studiejaren => ALLE SDS teams
 @odata.nextlink geeft aan dat er nog meer resultaat is
 Blijkt dat mijn msGraph Perl modules dit al regelen.
 
