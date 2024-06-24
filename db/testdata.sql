@@ -22,8 +22,8 @@ Insert Into magisterdocentenrooster ('docentid','teamid') values
 
 Insert Into magisterleerlingenrooster ('leerlingid','teamid') values
    ('3','1'),
-   ('5','1'),
-   ('5','1'),
+   ('3','2'),
+   ('4','1'),
    ('4','2'),
    ('5','2'),
    ('6','2')

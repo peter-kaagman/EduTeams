@@ -246,7 +246,9 @@ sub MagisterAzure{
                 # Eigenaren
                 foreach my $magister_azureid (keys %{$magisterteam->{'docenten'}}){
                     if (! $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid}){
-                        push(@{$ToDo->{'Magister'}->{'MagisterDocentToevoegen'}->{$magisternaam}}, $magister_azureid);
+                        say "Team id?";
+                        print Dumper ;
+                        push(@{$ToDo->{'Magister'}->{'MagisterMembersToevoegen'}->{$Azure->{$magisternaam}->{'id'}}->{'docenten'}}, $magister_azureid);
                         # Dit heeft impact op de controlle vanuit Azure, deze docent dus ook toevoegen aan de Azure hash
                         $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                     }
@@ -254,7 +256,7 @@ sub MagisterAzure{
                 # Leerlingen
                 foreach my $magister_id (keys %{$magisterteam->{'leerlingen'}}){
                     if (! $Azure->{$magisternaam}->{'leerlingen'}->{$magister_id}){
-                        push(@{$ToDo->{'Magister'}->{'MagisterLeerlingToevoegen'}->{$magisternaam}}, $magister_id);
+                        push(@{$ToDo->{'Magister'}->{'MagisterMembersToevoegen'}->{$Azure->{$magisternaam}->{'id'}}->{'leerlingen'}}, $magister_id);
                         # Dit heeft impact op de controlle vanuit Azure, deze leerling dus ook toevoegen aan de Azure hash
                         $Azure->{$magisternaam}->{'leerlingen'}->{$magister_id} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                     }
@@ -299,7 +301,7 @@ sub AzureMagister{
                 #print Dumper $azureteam->{'leerlingen'};
                 foreach my $azure_upn (keys %{$azureteam->{'leerlingen'}}){
                     if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_upn}){
-                        say "LLn verwijderen uit $azurenaam => $azure_upn";
+                        #say "LLn verwijderen uit $azurenaam => $azure_upn";
                         push(@{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}->{$Azure->{$azurenaam}->{'id'}}}, $azure_upn);
                     }
                 }
@@ -321,7 +323,7 @@ AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
 say "ToDo";
 print Dumper $ToDo if $ToDo;
-#exit 1; ## ff een dry run
+
 #
 # Vanaf hier gaan we mutaties uitvoeren
 #
@@ -354,6 +356,55 @@ foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}
 # ALTIJD eerst toevoegen en dan pas verwjderen uit Azure, anders kun je een team zonder eigenaar krijgen
 # # Een docent/lln staat bij een team in Magister maar niet in Azure => docent/lln toevoegen in Azure #9
 
+say "Members aanmaken";
+
+while ( my( $teamid, $team ) = each(%{$ToDo->{'Magister'}->{'MagisterMembersToevoegen'}}) ){
+    say "Members toevoegen aan $teamid";
+    my $group_object = MsGroup->new(
+        'app_id'        => $config{'APP_ID'},
+        'app_secret'    => $config{'APP_PASS'},
+        'tenant_id'     => $config{'TENANT_ID'},
+        'access_token'  => $groups_object->_get_access_token, #reuse token
+        'token_expires' => $groups_object->_get_token_expires,
+        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+        'id'            => $teamid,
+    );
+    #print Dumper $team;
+    my $memberPayload;
+    # Zij er owners toe te voegen?
+    if ($team->{'docenten'}){
+        foreach my $member (@{$team->{'docenten'}}){
+            last if ( ($memberPayload->{'values'}) && (@{$memberPayload->{'values'}} eq 200) ); # nooit meer dan 200 members toevoegen
+            my $user = {
+                '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+                'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$member\')"
+            };
+            push(@{$user->{'roles'}}, 'owner');
+            #print Dumper $user;
+            push(@{$memberPayload->{'values'}}, $user);
+    }
+    }
+    # Zijn er members toe te voegen?
+    if ($team->{'leerlingen'}){
+        foreach my $member (@{$team->{'leerlingen'}}){
+            last if ( ($memberPayload->{'values'}) && (@{$memberPayload->{'values'}} eq 200) ); # nooit meer dan 200 members toevoegen
+            my $user = {
+                '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+                'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$member\')"
+            };
+            push(@{$memberPayload->{'values'}}, $user);
+        }
+    }
+    #print encode_json($memberPayload),"\n";
+    my $result = $group_object->team_bulk_add_members($memberPayload);
+    if ($result->is_success){
+        "toegevoegd";
+    }else{
+        say "foutje";
+        print Dumper $result;
+    }
+}
 
 exit 1; # ff niet verder gaan
 
@@ -378,21 +429,21 @@ exit 1; # ff niet verder gaan
 #     }
 # }  
 # AzureDocentVerwijderen
-while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
-    say "Docent verwijderen uit: $id";
-    my $group_object = MsGroup->new(
-        'app_id'        => $config{'APP_ID'},
-        'app_secret'    => $config{'APP_PASS'},
-        'tenant_id'     => $config{'TENANT_ID'},
-        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-        'select'        => '$select=id,displayName,userPrincipalName',
-        'id'            => $id,
-    );
-    foreach my $docent_id  (@{$array}){
-        $group_object->team_removeMember($docent_id)
-    }
-}  
+# while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
+#     say "Docent verwijderen uit: $id";
+#     my $group_object = MsGroup->new(
+#         'app_id'        => $config{'APP_ID'},
+#         'app_secret'    => $config{'APP_PASS'},
+#         'tenant_id'     => $config{'TENANT_ID'},
+#         'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+#         'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+#         'select'        => '$select=id,displayName,userPrincipalName',
+#         'id'            => $id,
+#     );
+#     foreach my $docent_id  (@{$array}){
+#         $group_object->team_removeMember($docent_id)
+#     }
+# }  
 
 
 $logger->make_log("$FindBin::Bin/$FindBin::Script Beeindigd.");
