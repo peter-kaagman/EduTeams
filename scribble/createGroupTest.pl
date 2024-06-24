@@ -43,7 +43,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -112,7 +112,7 @@ my $new_group = {
         "description" => "My $naam group description",
         "displayName" => "My $naam group displayName",
         "mailEnabled" => \1,
-        "mailNickName" => "Section_$naam",
+        "mailNickName" => "EduTeam_$naam",
         "securityEnabled" => \0,
 };
 # add the groupType array
@@ -152,48 +152,3 @@ if ($result->is_success){
         say "Er is een fout opgetreden: $result->{'_rc'}";
     }
 }
-# Benieuwd of de group direct zichtbaar is
-#listGroups;
-
-# created group _content
-# {
-#     "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups/$entity",
-#     "id": "9a8643bf-a9d0-4ed1-9295-fbb75bc3bf9a",
-#     "deletedDateTime": null,
-#     "classification": null,
-#     "createdDateTime": "2024-05-24T14:39:30Z",
-#     "creationOptions": [],
-#     "description": "My first group description",
-#     "displayName": "My first group displayName",
-#     "expirationDateTime": null,
-#     "groupTypes": [
-#         "Unified"
-#     ],
-#     "isAssignableToRole": null,
-#     "mail": "Section_MyFirstGroup@ICTAtlasCollege.onmicrosoft.com",
-#     "mailEnabled": true,
-#     "mailNickname": "Section_MyFirstGroup",
-#     "membershipRule": null,
-#     "membershipRuleProcessingState": null,
-#     "onPremisesDomainName": null,
-#     "onPremisesLastSyncDateTime": null,
-#     "onPremisesNetBiosName": null,
-#     "onPremisesSamAccountName": null,
-#     "onPremisesSecurityIdentifier": null,
-#     "onPremisesSyncEnabled": null,
-#     "preferredDataLocation": null,
-#     "preferredLanguage": null,
-#     "proxyAddresses": [
-#         "SMTP:Section_MyFirstGroup@ICTAtlasCollege.onmicrosoft.com"
-#     ],
-#     "renewedDateTime": "2024-05-24T14:39:30Z",
-#     "resourceBehaviorOptions": [],
-#     "resourceProvisioningOptions": [],
-#     "securityEnabled": false,
-#     "securityIdentifier": "S-1-12-1-2592490431-1322363344-3086718354-2596258651",
-#     "theme": null,
-#     "uniqueName": null,
-#     "visibility": "Public",
-#     "onPremisesProvisioningErrors": [],
-#     "serviceProvisioningErrors": []
-# }

@@ -3,7 +3,6 @@
 rm ./db/eduteams.sqlite
 sqlite3 db/eduteams.sqlite ".read ./db/schema.sql"
 sqlite3 db/eduteams.sqlite ".read ./db/testdata.sql"
-./getUsers.pl
 ./scribble/createJaarlaag.pl
 ./getAzureTeams.pl
-./vergelijk.pl
+#./vergelijk.pl

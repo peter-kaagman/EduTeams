@@ -41,7 +41,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 # Handler om gemaakte groepen te kunnen vastleggen
 my $sth_team_created = $dbh->prepare('Insert Into teamcreated (timestamp, naam, members, owners ) values (?,?,?,?)');
 
-my ($Azure, $Magister, $LlnId, $ToDo); # Global hashes to store info
+my ($Azure, $Magister,$ToDo); # Global hashes to store info
 
 # Deze maak ik global omdat ik maar 1x de verbinding wil maken
 my $groups_object = MsGroups->new(
@@ -50,7 +50,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -66,8 +66,8 @@ sub createEduTeam {
     }
     my $new_team = {
         'template@odata.bind' => 'https://graph.microsoft.com/v1.0/teamsTemplates(\'educationClass\')',
-        "description" => "Section_".$description,
-        "displayName" => "Section_".$name
+        "description" => "EduTeam_".$description,
+        "displayName" => "EduTeam_".$name
     };
     # Team wordt gemaakt via de teams interface
     # het MOET 1 eigenaar hebben (ook niet meer dan 1)
@@ -118,37 +118,43 @@ sub createEduTeam {
 sub AzureHash{
     $logger->make_log("$FindBin::Bin/$FindBin::Script Azure hash maken.");
 
+    # Leerlingen en docenten in één users database levert hier een uitdaging op
+    # ik heb geen idee hoe ik dat in één query kan uitvragen, in twee keer dus maar
+    # eerst docenten
     my $qry = << "    END_QRY";
     Select
         azureteam.*,
-        azuredocent.azureid As 'docent_azureid',
-        azuredocent.naam As 'docent_naam',
-        azureleerling.upn As 'leerling_upn',
-        azureleerling.azureid As 'leerling_azureid',
-        azureleerling.naam As 'leerling_naam'
+        users.azureid As 'docent_azureid',
+        users.naam As 'docent_naam'
     From azureteam
     Left Join azuredocrooster       On azuredocrooster.azureteam_id = azureteam.ROWID
-    Left Join azuredocent           On azuredocrooster.azuredocent_id = azuredocent.ROWID
-    Left Join azureleerlingrooster   On azureleerlingrooster.azureteam_id = azureteam.ROWID
-    Left Join azureleerling         On azureleerlingrooster.azureleerling_id = azureleerling.ROWID
+    Left Join users           On azuredocrooster.azuredocent_id = users.ROWID
     END_QRY
+
     my $sth = $dbh->prepare($qry);
     $sth->execute();
     while (my $row = $sth->fetchrow_hashref()){
         $Azure->{$row->{'description'}}->{'id'} = $row->{'id'};
         $Azure->{$row->{'description'}}->{'displayName'} = $row->{'displayName'};
-        if ($row->{'docent_naam'}){
-            $Azure->{$row->{'description'}}->{'docenten'}->{$row->{'docent_azureid'}} = $row->{'docent_naam'};
-        #}else{
-        #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'description'}. " heeft geen docenten");
-        }
-        if ($row->{'leerling_naam'}){
-            $Azure->{$row->{'description'}}->{'leerlingen'}->{$row->{'leerling_upn'}} = $row->{'leerling_naam'};
-            # Leerling id in een hash stoppen met upn als index, scheelt een hoop requests
-            $LlnId->{$row->{'leerling_upn'}} = $row->{'leerling_azureid'};
-        #}else{
-        #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'description'}. " heeft geen leerlingen");
-        }
+        $Azure->{$row->{'description'}}->{'docenten'}->{$row->{'docent_azureid'}} = $row->{'docent_naam'};
+    }
+    $sth->finish;
+    $qry = << "    END_QRY";
+    Select
+        azureteam.*,
+        users.azureid As 'leerling_azureid',
+        users.naam As 'leerling_naam'
+    From azureteam
+    Left Join azureleerlingrooster   On azureleerlingrooster.azureteam_id = azureteam.ROWID
+    Left Join users         On azureleerlingrooster.azureleerling_id = users.ROWID
+    END_QRY
+
+    $sth = $dbh->prepare($qry);
+    $sth->execute();
+    while (my $row = $sth->fetchrow_hashref()){
+        $Azure->{$row->{'description'}}->{'id'} = $row->{'id'};
+        $Azure->{$row->{'description'}}->{'displayName'} = $row->{'displayName'};
+        $Azure->{$row->{'description'}}->{'leerlingen'}->{$row->{'leerling_azureid'}} = $row->{'leerling_naam'};
     }
     $sth->finish;
     #print Dumper $Azure;
@@ -160,33 +166,42 @@ sub AzureHash{
 sub MagisterHash {
     $logger->make_log("$FindBin::Bin/$FindBin::Script Magister hash maken.");
 
+    # Leerlingen en docenten in één users database levert hier een uitdaging op
+    # ik heb geen idee hoe ik dat in één query kan uitvragen, in twee keer dus maar
+    # eerst docenten
     my $qry = << "    END_QRY";
     Select
         magisterteam.*,
-        magisterdocent.azureid As 'azureid',
-        magisterdocent.naam As 'docent_naam',
-        magisterleerling.upn As 'leerling_upn',
-        magisterleerling.naam As 'leerling_naam'
+        users.azureid As 'azureid',
+        users.naam As 'docent_naam'
     From magisterteam
     Left Join magisterdocentenrooster   On magisterdocentenrooster.teamid = magisterteam.ROWID
-    Left Join magisterdocent            On magisterdocentenrooster.docentid = magisterdocent.ROWID
-    Left Join magisterleerlingenrooster On magisterleerlingenrooster.teamid = magisterteam.ROWID
-    Left Join magisterleerling          On magisterleerlingenrooster.leerlingid = magisterleerling.ROWID
+    Left Join users                     On magisterdocentenrooster.docentid = users.ROWID
     END_QRY
     my $sth = $dbh->prepare($qry);
     $sth->execute();
     while (my $row = $sth->fetchrow_hashref()){
         $Magister->{$row->{'naam'}}->{'type'} = $row->{'type'};
-        if ($row->{'docent_naam'}){
-            $Magister->{$row->{'naam'}}->{'docenten'}->{$row->{'azureid'}} = $row->{'docent_naam'};
-        #}else{
-        #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'naam'}. " heeft geen docenten");
-        }
-        if ($row->{'leerling_naam'}){
-            $Magister->{$row->{'naam'}}->{'leerlingen'}->{$row->{'leerling_upn'}} = $row->{'leerling_naam'};
-        #}else{
-        #    $logger->make_log("$FindBin::Bin/$FindBin::Script ". $row->{'naam'}. " heeft geen leerlingen");
-        }
+        $Magister->{$row->{'naam'}}->{'docenten'}->{$row->{'azureid'}} = $row->{'docent_naam'};
+        # if ($row->{'leerling_naam'}){
+        #     $Magister->{$row->{'naam'}}->{'leerlingen'}->{$row->{'leerling_upn'}} = $row->{'leerling_naam'};
+        # }
+    }
+    $sth->finish;
+    # dan leerlingen
+    $qry = << "    END_QRY";
+    Select
+        magisterteam.*,
+        users.azureid As 'azureid',
+        users.naam As 'leerling_naam'
+    From magisterteam
+    Left Join magisterleerlingenrooster On magisterleerlingenrooster.teamid = magisterteam.ROWID
+    Left Join users                     On magisterleerlingenrooster.leerlingid = users.ROWID
+    END_QRY
+    $sth = $dbh->prepare($qry);
+    $sth->execute();
+    while (my $row = $sth->fetchrow_hashref()){
+        $Magister->{$row->{'naam'}}->{'leerlingen'}->{$row->{'azureid'}} = $row->{'leerling_naam'};
     }
     $sth->finish;
     #print Dumper $Magister;
@@ -200,14 +215,11 @@ sub MagisterAzure{
     # Mutaties vanuit Magister hebben invloed op de vergelijking vanuit Azure die hierop volgt.
     # het archiveren van teams en het toevoegen van leerlingen dus direct ook verwerken in de Azure hash.
 
-    $logger->make_log("$FindBin::Bin/$FindBin::Script Magister vergelijken met Azure.");
+    $logger->make_log("$FindBin::Bin/$FindBin::Script INFO Magister vergelijken met Azure.");
     while (my ($magisternaam, $magisterteam) = each( %$Magister)){
-        #say $naam;
-        #print Dumper $magisterteam;
-
         # Een magister team moet leerlingen hebben
         # Een team heeft altijd tenminste 1 docent, anders staat hij niet in de db
-        if ( ! $magisterteam->{'leerlingen'} ){
+        if ( ! $magisterteam->{'leerlingen'} ){ # ToDo:Testen
             # Dit team heeft geen leerlingen
             # Zou dus niet mogen bestaan in Azure
             if ($Azure->{$magisternaam}){
@@ -232,19 +244,19 @@ sub MagisterAzure{
                 # Azure bestaat 
                 # Eigenaren en leden controleren
                 # Eigenaren
-                foreach my $magister_upn (keys %{$magisterteam->{'docenten'}}){
-                    if (! $Azure->{$magisternaam}->{'docenten'}->{$magister_upn}){
-                        push(@{$ToDo->{'Magister'}->{'MagisterDocentToevoegen'}->{$magisternaam}}, $magister_upn);
+                foreach my $magister_azureid (keys %{$magisterteam->{'docenten'}}){
+                    if (! $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid}){
+                        push(@{$ToDo->{'Magister'}->{'MagisterDocentToevoegen'}->{$magisternaam}}, $magister_azureid);
                         # Dit heeft impact op de controlle vanuit Azure, deze docent dus ook toevoegen aan de Azure hash
-                        $Azure->{$magisternaam}->{'docenten'}->{$magister_upn} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
+                        $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                     }
                 }
                 # Leerlingen
-                foreach my $magister_upn (keys %{$magisterteam->{'leerlingen'}}){
-                    if (! $Azure->{$magisternaam}->{'leerlingen'}->{$magister_upn}){
-                        push(@{$ToDo->{'Magister'}->{'MagisterLeerlingToevoegen'}->{$magisternaam}}, $magister_upn);
+                foreach my $magister_id (keys %{$magisterteam->{'leerlingen'}}){
+                    if (! $Azure->{$magisternaam}->{'leerlingen'}->{$magister_id}){
+                        push(@{$ToDo->{'Magister'}->{'MagisterLeerlingToevoegen'}->{$magisternaam}}, $magister_id);
                         # Dit heeft impact op de controlle vanuit Azure, deze leerling dus ook toevoegen aan de Azure hash
-                        $Azure->{$magisternaam}->{'leerlingen'}->{$magister_upn} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
+                        $Azure->{$magisternaam}->{'leerlingen'}->{$magister_id} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
                     }
                 }
             }
@@ -338,30 +350,33 @@ foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}
         $Team2Archive
     );
 }
+
+# ALTIJD eerst toevoegen en dan pas verwjderen uit Azure, anders kun je een team zonder eigenaar krijgen
+# # Een docent/lln staat bij een team in Magister maar niet in Azure => docent/lln toevoegen in Azure #9
+
+
 exit 1; # ff niet verder gaan
 
 
-# Een docent/lln staat bij een team in Magister maar niet in Azure => docent/lln toevoegen in Azure #9
-
-# Een docent/lln staat bij een team in Azure maar niet in Magister => docent/lln verwijderen #10
-## AzureLeerlingVerwijderen
-while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
-    say "Lln verwijderen uit: $id";
-    my $group_object = MsGroup->new(
-        'app_id'        => $config{'APP_ID'},
-        'app_secret'    => $config{'APP_PASS'},
-        'tenant_id'     => $config{'TENANT_ID'},
-        'access_token'  => $groups_object->_get_access_token, #reuse token
-        'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-        'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-        'select'        => '$select=id,displayName,userPrincipalName',
-        'id'            => $id,
-    );
-    foreach my $lln_upn  (@{$array}){
-        say "LLN id $lln_upn => $LlnId->{$lln_upn}";
-        $group_object->team_removeMember($LlnId->{$lln_upn})
-    }
-}  
+# # Een docent/lln staat bij een team in Azure maar niet in Magister => docent/lln verwijderen #10
+# ## AzureLeerlingVerwijderen
+# while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
+#     say "Lln verwijderen uit: $id";
+#     my $group_object = MsGroup->new(
+#         'app_id'        => $config{'APP_ID'},
+#         'app_secret'    => $config{'APP_PASS'},
+#         'tenant_id'     => $config{'TENANT_ID'},
+#         'access_token'  => $groups_object->_get_access_token, #reuse token
+#         'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+#         'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+#         'select'        => '$select=id,displayName,userPrincipalName',
+#         'id'            => $id,
+#     );
+#     foreach my $lln_upn  (@{$array}){
+#         say "LLN id $lln_upn => $LlnId->{$lln_upn}";
+#         $group_object->team_removeMember($LlnId->{$lln_upn})
+#     }
+# }  
 # AzureDocentVerwijderen
 while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
     say "Docent verwijderen uit: $id";

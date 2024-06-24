@@ -26,7 +26,7 @@ my $user_object = MsUser->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 

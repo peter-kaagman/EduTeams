@@ -46,14 +46,14 @@ my $dsn = "DBI:$driver:dbname=$db";
 my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
     or die $DBI::errstr;    
 
-my $sth_azureleerling = $dbh->prepare("Insert Into azureleerling  (upn, azureid, naam) values (?,?,'van create team')");
-# Een hash om lln id's te bewaren, indexed op UPN
-# Er is een tabel AzureLeerlingen, daar kunnen al gegevens in staan, scheelt weer requests
-my $sth = $dbh->prepare("Select upn,azureid From azureleerling");
-$sth->execute;
-my $lln_by_upn = $sth->fetchall_hashref('upn');
-$sth->execute;
-my $lln_by_id = $sth->fetchall_hashref('azureid');
+# my $sth_azureleerling = $dbh->prepare("Insert Into azureleerling  (upn, azureid, naam) values (?,?,'van create team')");
+# # Een hash om lln id's te bewaren, indexed op UPN
+# # Er is een tabel AzureLeerlingen, daar kunnen al gegevens in staan, scheelt weer requests
+# my $sth = $dbh->prepare("Select upn,azureid From azureleerling");
+# $sth->execute;
+# my $lln_by_upn = $sth->fetchall_hashref('upn');
+# $sth->execute;
+# my $lln_by_id = $sth->fetchall_hashref('azureid');
 
 my $groups_object = MsGroups->new(
     'app_id'        => $config{'APP_ID'},
@@ -61,7 +61,7 @@ my $groups_object = MsGroups->new(
     'tenant_id'     => $config{'TENANT_ID'},
     'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
     'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-    'filter'        => '$filter=startswith(mail,\'Section_\')',
+    'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -71,7 +71,7 @@ my $user_object = MsUser->new(
     'tenant_id'     => $config{'TENANT_ID'},
     'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
     'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-    'filter'        => '$filter=startswith(mail,\'Section_\')',
+    'filter'        => '$filter=startswith(mail,\'EdutTeam_\')',
     'access_token'  => $groups_object->_get_access_token, # resuse token
     'token_expires' => $groups_object->_get_token_expires,
     'select'        => '$select=id,displayName,description,mail',
@@ -79,7 +79,7 @@ my $user_object = MsUser->new(
 
 
 # Eens kijken of er iets te doen is
-$sth = $dbh->prepare('Select ROWID,* From teamcreated');
+my $sth = $dbh->prepare('Select ROWID,* From teamcreated');
 $sth->execute();
 
 
@@ -100,8 +100,8 @@ while(my $row = $sth->fetchrow_hashref()){
             if ($row->{'id'}){
                 $team_id = $row->{'id'}
             }else{
-                # Niet in de database dus ff opzoeken via de mailNickname, deze is immutable en heeft Section_ als prefix
-                $team_id = $groups_object->group_find_id("Section_".$row->{'naam'});
+                # Niet in de database dus ff opzoeken via de mailNickname, deze is immutable en heeft EduTeam_ als prefix
+                $team_id = $groups_object->group_find_id("EduTeam_".$row->{'naam'});
             }
             if ($team_id){
                  $logger->make_log("$FindBin::Bin/$FindBin::Script INFO Id bekend: $team_id");
@@ -188,34 +188,13 @@ while(my $row = $sth->fetchrow_hashref()){
                     print Dumper $leden;
                     my $members;
                     say "Leden toevoegen";
-                    foreach my $upn (keys %{$leden}){
+                    foreach my $id (keys %{$leden}){
                         last if ( ($members->{'values'}) && (@{$members->{'values'}} eq 200) ); # nooit meer dan 200 members toevoegen
-                        # Leden (lln) staan met een UPN in de hash, 
-                        # toevoegen kan ook met een UPN, maar de terugkoppeling komt op ID
-                        my $lln_id;
-                        # Een hoop gedoe om van de UPN een ID te krijgen en ook vice versa op te kunnen zoeken
-                        if ($lln_by_upn->{$upn}->{'azureid'}){
-                            $lln_id = $lln_by_upn->{$upn}->{'azureid'};
-                            $lln_by_id->{$lln_id}->{'upn'} = $upn;
-                        }else{
-                            $lln_id = $user_object->fetch_id_by_upn($upn);
-                            $lln_by_upn->{$upn}->{'azureid'} = $lln_id;
-                            $lln_by_id->{$lln_id}->{'upn'} = $upn;
-                            # ook ff terugschrijven naar azureleerling
-                            if ($lln_id ne 'onbekend'){
-                                say "$upn => $lln_id";
-                                $sth_azureleerling->execute($upn,$lln_id);
-                            }
-                        }                    
-                        if ($lln_id ne 'onbekend'){ # het is mogelijk dat een lln in Magister niet in Azure staat
-                            my $user = {
-                                '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
-                                'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$lln_id\')"
-                            };
-                            push(@{$members->{'values'}}, $user);
-                        }else{
-                            $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR LLN $upn heeft geen Azure account");
-                        }
+                        my $user = {
+                            '@odata.type'=> '#microsoft.graph.aadUserConversationMember',
+                            'user@odata.bind' => "https://graph.microsoft.com/v1.0/users(\'$id\')"
+                        };
+                        push(@{$members->{'values'}}, $user);
                     }
                     #print Dumper $members;
                     if (%{$members}){
@@ -231,7 +210,7 @@ while(my $row = $sth->fetchrow_hashref()){
                                 }else{
                                     #say "geen error, lln $lln_by_id->{$report->{'userId'}}  is toegevoegd";
                                     # Succes => verwijderen uit de todo hash
-                                    delete($leden->{$lln_by_id->{$report->{'userId'}}->{'upn'}});
+                                    delete($leden->{$report->{'userId'}})
                                 }
                             }
                             # schrijf de todo hash terug naar de database (kan dus ook leeg zijn)

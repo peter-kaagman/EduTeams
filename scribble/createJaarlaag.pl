@@ -23,7 +23,7 @@ my $logger = Logger->new(
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/../config/EduTeams.cfg", \%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/../config/EduTeamsTest.cfg", \%config) or die("No config: $!");
 #print Dumper \%config; exit 0;
 
 my $driver = $config{'DB_DRIVER'};

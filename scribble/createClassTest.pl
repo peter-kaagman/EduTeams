@@ -31,7 +31,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -39,8 +39,8 @@ my $groups_object = MsGroups->new(
 my $new_class = {
     "description" => "My first class description",
     "displayName" => "My first class displayName",
-    "mailNickname" => "Section_firstClass",
-    "externalId" => "Section_firstClass",
+    "mailNickname" => "EduTeam_firstClass",
+    "externalId" => "EduTeam_firstClass",
 #    "externalSource" => "manual",
 #    "externalSourceDetail" => "EduTeams",
     "course" => {

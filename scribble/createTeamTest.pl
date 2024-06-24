@@ -43,7 +43,7 @@ my $teams_object = MsTeams->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -117,24 +117,8 @@ my $new_team = {
         "description" => "My $naam group description",
         "displayName" => "My $naam group displayName",
         "mailEnabled" => \1,
-        "mailNickName" => "Section_$naam",
+        "mailNickName" => "EduTeam_$naam",
 };
-# # add the groupType array
-# push(@{$new_group->{'groupTypes'}}, 'Unified');
-# # add the owners
-# my @owners; # ff een array met 2 owners
-# push(@owners, 'docent1@ict-atlascollege.nl');
-# push(@owners, 'docent2@ict-atlascollege.nl');
-# # Zodat we in een loop de owner kunnen toevoegen
-# foreach my $owner (@owners){
-#     push(@{$new_group->{'owners@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{$owner}->{'id'});
-#     # een owner moet ook member zijn
-#     push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{$owner}->{'id'});
-# }
-# # en de gewone leden toevoegen
-# # push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling2@ict-atlascollege.nl'}->{'id'});
-# # push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling3@ict-atlascollege.nl'}->{'id'});
-# # push(@{$new_group->{'members@odata.bind'}}, 'https://graph.microsoft.com/v1.0/users/'.$users->{'leerling4@ict-atlascollege.nl'}->{'id'});
 
 my $result = $teams_object->create_team($new_team);
 if ($result->is_success){
@@ -153,45 +137,3 @@ if ($result->is_success){
 # # Benieuwd of de group direct zichtbaar is
 listTeams;
 
-# created group _content
-# {
-#     "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#groups/$entity",
-#     "id": "9a8643bf-a9d0-4ed1-9295-fbb75bc3bf9a",
-#     "deletedDateTime": null,
-#     "classification": null,
-#     "createdDateTime": "2024-05-24T14:39:30Z",
-#     "creationOptions": [],
-#     "description": "My first group description",
-#     "displayName": "My first group displayName",
-#     "expirationDateTime": null,
-#     "groupTypes": [
-#         "Unified"
-#     ],
-#     "isAssignableToRole": null,
-#     "mail": "Section_MyFirstGroup@ICTAtlasCollege.onmicrosoft.com",
-#     "mailEnabled": true,
-#     "mailNickname": "Section_MyFirstGroup",
-#     "membershipRule": null,
-#     "membershipRuleProcessingState": null,
-#     "onPremisesDomainName": null,
-#     "onPremisesLastSyncDateTime": null,
-#     "onPremisesNetBiosName": null,
-#     "onPremisesSamAccountName": null,
-#     "onPremisesSecurityIdentifier": null,
-#     "onPremisesSyncEnabled": null,
-#     "preferredDataLocation": null,
-#     "preferredLanguage": null,
-#     "proxyAddresses": [
-#         "SMTP:Section_MyFirstGroup@ICTAtlasCollege.onmicrosoft.com"
-#     ],
-#     "renewedDateTime": "2024-05-24T14:39:30Z",
-#     "resourceBehaviorOptions": [],
-#     "resourceProvisioningOptions": [],
-#     "securityEnabled": false,
-#     "securityIdentifier": "S-1-12-1-2592490431-1322363344-3086718354-2596258651",
-#     "theme": null,
-#     "uniqueName": null,
-#     "visibility": "Public",
-#     "onPremisesProvisioningErrors": [],
-#     "serviceProvisioningErrors": []
-# }

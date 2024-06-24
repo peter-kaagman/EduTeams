@@ -28,7 +28,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	#'filter'        => '$filter=startswith(mail,\'Section_\')',
+	#'filter'        => '$filter=startswith(mail,\'EduTeam_\')',
     'select'        => '$select=id,displayName,description,mail',
 );
 
@@ -39,7 +39,7 @@ my $new_team = {
     'template@odata.bind' => 'https://graph.microsoft.com/v1.0/teamsTemplates(\'educationClass\')',
     "description" => $description,
     "displayName" => $name,
-    "mailNickname"  => "Section_".$name
+    "mailNickname"  => "EduTeam_".$name
 };
 
 # add the owners => met deze methode mag er maar 1 lid toegvoegd worden.
