@@ -60,6 +60,10 @@ my $usersByUpn = $sth_users->fetchall_hashref('upn');
 #$sth_users->execute();
 #my $usersById = $sth_users->fetchall_hashref('azureid');
 
+# azureteam
+$dbh->do('Delete From azureteam_members'); # Truncate the table 
+$qry = "Insert Into azureteam_members (teamid,user_azureid,user_memberid) values (?,?,?) ";
+my $sth_azureteam_members = $dbh->prepare($qry);
 
 
 my $groups_object = MsGroups->new(
@@ -102,12 +106,18 @@ if ($groups_object->_get_access_token){
             'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
             'access_token'  => $groups_object->_get_access_token, # hergebruik het token
             'token_expires' => $groups_object->_get_token_expires,
-            'select'        => '$select=id,displayName,userPrincipalName',
+            #'select'        => '$select=id,displayName,userPrincipalName',
             'id'            => $team->{'id'},
         );
         # Member ophalen van het team
         my $members = $group_object->team_members();
         foreach my $member (@{$members}){
+            # azuretem_members tabel bijwerken met MembershipId
+            # deze is nodig bij het verwijderen van een teamlid.
+            # deze is dus altijd voorhanden
+            #print Dumper $member;
+            #$qry = "Insert Into azureteam_members (teamid,user_azureid,user_memberid) values (?,?,?) ";
+            $sth_azureteam_members->execute($team->{'id'},$member->{'userId'},$member->{'id'});
             if ($member->{'roles'}[0]){
                 # ROWID van docent en team is bekend => toevoegen aan azuredocrooster
                 # $qry = "Insert Into azuredocrooster (azureteam_id,azuredocent_id) values (?,?) ";

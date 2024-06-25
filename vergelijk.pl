@@ -40,6 +40,8 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 
 # Handler om gemaakte groepen te kunnen vastleggen
 my $sth_team_created = $dbh->prepare('Insert Into teamcreated (timestamp, naam, members, owners ) values (?,?,?,?)');
+# Om een memberid te kunnen vinden
+my $sth_memberid = $dbh->prepare('Select user_memberid From azureteam_members Where teamid = ? And user_azureid = ?');
 
 my ($Azure, $Magister,$ToDo); # Global hashes to store info
 
@@ -183,9 +185,6 @@ sub MagisterHash {
     while (my $row = $sth->fetchrow_hashref()){
         $Magister->{$row->{'naam'}}->{'type'} = $row->{'type'};
         $Magister->{$row->{'naam'}}->{'docenten'}->{$row->{'azureid'}} = $row->{'docent_naam'};
-        # if ($row->{'leerling_naam'}){
-        #     $Magister->{$row->{'naam'}}->{'leerlingen'}->{$row->{'leerling_upn'}} = $row->{'leerling_naam'};
-        # }
     }
     $sth->finish;
     # dan leerlingen
@@ -294,15 +293,20 @@ sub AzureMagister{
                 # Eigenaren
                 foreach my $azure_id (keys %{$azureteam->{'docenten'}}){
                     if (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id}){
-                        push(@{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}->{$Azure->{$azurenaam}->{'id'}}}, $azure_id);
+                        # Member id opzoeken
+                        $sth_memberid->execute($Azure->{$azurenaam}->{'id'}, $azure_id);
+                        my $row = $sth_memberid->fetchrow_hashref;
+                        push(@{$ToDo->{'Azure'}->{'AzureMemberVerwijderen'}->{ $Azure->{$azurenaam}->{'id'} } }, $row->{'user_memberid'});
                     }
                 }
                 # Leerlingen
                 #print Dumper $azureteam->{'leerlingen'};
-                foreach my $azure_upn (keys %{$azureteam->{'leerlingen'}}){
-                    if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_upn}){
-                        #say "LLn verwijderen uit $azurenaam => $azure_upn";
-                        push(@{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}->{$Azure->{$azurenaam}->{'id'}}}, $azure_upn);
+                foreach my $azure_id (keys %{$azureteam->{'leerlingen'}}){
+                    if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_id}){
+                        # Member id opzoeken
+                        $sth_memberid->execute($Azure->{$azurenaam}->{'id'}, $azure_id);
+                        my $row = $sth_memberid->fetchrow_hashref;
+                        push(@{$ToDo->{'Azure'}->{'AzureMemberVerwijderen'}->{$Azure->{$azurenaam}->{'id'} } }, $row->{'user_memberid'});
                     }
                 }
 
@@ -323,7 +327,6 @@ AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
 say "ToDo";
 print Dumper $ToDo if $ToDo;
-
 #
 # Vanaf hier gaan we mutaties uitvoeren
 #
@@ -399,11 +402,40 @@ while ( my( $teamid, $team ) = each(%{$ToDo->{'Magister'}->{'MagisterMembersToev
     #print encode_json($memberPayload),"\n";
     my $result = $group_object->team_bulk_add_members($memberPayload);
     if ($result->is_success){
-        "toegevoegd";
+        $logger->make_log("$FindBin::Bin/$FindBin::Script Info leden toegevoegd: ".encode_json($memberPayload));
     }else{
-        say "foutje";
-        print Dumper $result;
+        $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR fout bij leden toegevoegen: ".encode_json($result));
     }
+}
+
+# Een docent/lln staat bij een team in Azure maar niet in Magister => docent/lln verwijderen #10
+# Beetje zinloos om docenten en lln apart te behandelen, beide staan in de todo met hun id
+
+say "Members verwijderen";
+if ($ToDo->{'Azure'}->{'AzureMemberVerwijderen'}){
+    while ( my( $teamid, $members ) = each(%{$ToDo->{'Azure'}->{'AzureMemberVerwijderen'}}) ){
+        my $group_object = MsGroup->new(
+            'app_id'        => $config{'APP_ID'},
+            'app_secret'    => $config{'APP_PASS'},
+            'tenant_id'     => $config{'TENANT_ID'},
+            'access_token'  => $groups_object->_get_access_token, #reuse token
+            'token_expires' => $groups_object->_get_token_expires,
+            'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
+            'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
+            'select'        => '$select=id,displayName,userPrincipalName',
+            'id'            => $teamid,
+        );
+        foreach my $memberid (@{$members}){
+            my $result = $group_object->team_remove_member($memberid);
+            if ($result->is_success){
+                $logger->make_log("$FindBin::Bin/$FindBin::Script INFO Member $memberid verwijdert uit $teamid");
+            }else{
+                print Dumper $result;
+                #$logger->make_log("$FindBin::Bin/$FindBin::Script FOUT Member $memberid niet verwijdert uit $teamid => ".encode_json($result));
+            }
+        }
+    }
+
 }
 
 exit 1; # ff niet verder gaan
@@ -413,16 +445,6 @@ exit 1; # ff niet verder gaan
 # ## AzureLeerlingVerwijderen
 # while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
 #     say "Lln verwijderen uit: $id";
-#     my $group_object = MsGroup->new(
-#         'app_id'        => $config{'APP_ID'},
-#         'app_secret'    => $config{'APP_PASS'},
-#         'tenant_id'     => $config{'TENANT_ID'},
-#         'access_token'  => $groups_object->_get_access_token, #reuse token
-#         'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-#         'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-#         'select'        => '$select=id,displayName,userPrincipalName',
-#         'id'            => $id,
-#     );
 #     foreach my $lln_upn  (@{$array}){
 #         say "LLN id $lln_upn => $LlnId->{$lln_upn}";
 #         $group_object->team_removeMember($LlnId->{$lln_upn})
