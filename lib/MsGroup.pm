@@ -161,15 +161,6 @@ sub team_channel_id {
 	#say $url;
 	my $result = $self->callAPI($url, 'GET');
 	return $result;
-	# if ($result->is_success){
-	# 	my $content =  decode_json($result->decoded_content);
-	# 	#return $content->{'value'}[0]->{'id'};
-
-	# 	#return (decode_json($result->{'value'}))[0]->{'id'};
-	# }else{
-	# 	#print Dumper $result;
-	# 	return $result;
-	# }
 }
 
 sub team_check_general {
@@ -187,6 +178,15 @@ sub team_check_general {
 	}else{
 		return $general_id;
 	}
+}
+
+sub team_remove_member{
+	my $self = shift;
+	my $id_2_remove = shift;
+	my $url = $self->_get_graph_endpoint . "/v1.0/teams/".$self->_get_id."/members/$id_2_remove";
+	say $url;
+	my $result = $self->callAPI($url, 'DELETE');
+	return $result;	
 }
 #
 # Class related

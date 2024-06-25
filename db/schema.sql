@@ -4,6 +4,7 @@
 Create Table If Not Exists users(
     azureid Text Unique Not Null,
     upn Text Unique Not Null,
+    memberid Text,
     stamnr Text,
     naam Text
 );
@@ -11,12 +12,16 @@ Create Table If Not Exists users(
 --
 -- Magister
 --
+-- Groepen en klassen uit magister
+--
 Create Table If Not Exists magisterteam(
     naam Text Not Null Unique,
     type Text 
 );
 
+--
 -- Koppeltabel tussen docenten en teams op ROWID
+--
 Create Table If Not Exists magisterdocentenrooster(
     docentid Integer Not Null,
     teamid Integer Not Null,
@@ -26,7 +31,9 @@ Create Table If Not Exists magisterdocentenrooster(
     Foreign Key (teamid) References magisterteam(ROWID)
 );
 
+--
 -- Koppeltabel tussen leerlingen en teams op ROWID
+--
 Create Table If Not Exists magisterleerlingenrooster(
     leerlingid Integer Not Null,
     teamid Integer Not Null,
@@ -39,11 +46,25 @@ Create Table If Not Exists magisterleerlingenrooster(
 --
 -- Azure
 --
+-- Azure teams
+--
 Create Table If Not Exists azureteam(
     id Text Not Null Unique,
     description Text Not Null,
     displayName Text Not Null,
     secureName Text Not Null
+);
+
+--
+-- Team members
+-- A table to store member ids of team member
+--
+Create Table If Not Exists azureteam_members(
+    teamid Text Not Null,
+    user_azureid Text Not Null,
+    user_memberid Text Not Null,
+    Foreign Key (teamid) References azureteam(id),
+    Foreign Key (user_azureid) References users(azureid)
 );
 
 Create Table If Not Exists azuredocrooster(
