@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../magister-perl"
+		},
+		{
+			"path": "../msgraph-perl"
 		}
 	],
 	"settings": {

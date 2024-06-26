@@ -13,7 +13,7 @@ use Config::Simple;
 use Time::Piece;
 use Time::Seconds;
 use JSON qw(decode_json encode_json);
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../msgraph-perl/lib";
 
 use Logger; # Om te loggen
 use MsGroups;
