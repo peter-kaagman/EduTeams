@@ -8,7 +8,7 @@ use Data::Dumper;
 use Config::Simple;
 use DBI;
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../msgraph-perl/lib";
 
 use MsGroups;
 use MsGroup;

@@ -19,7 +19,7 @@ use FindBin;
 use JSON;
 use Time::Piece;
 use Time::Seconds;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../msgraph-perl/lib";
 
 use MsGroups;
 use MsGroup;

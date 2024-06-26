@@ -8,7 +8,7 @@ use Data::Dumper;
 use Config::Simple;
 use DBI;
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../msgraph-perl/lib";
 
 use MsUsers;
 use Logger;
@@ -20,7 +20,7 @@ my $logger = Logger->new(
 $logger->make_log("$FindBin::Bin/$FindBin::Script INFO started.");
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/config/EduTeamsTest.cfg",\%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/config/EduTeams.cfg",\%config) or die("No config: $!");
 
 
 my $driver = $config{'DB_DRIVER'};

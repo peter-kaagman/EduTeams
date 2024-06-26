@@ -11,7 +11,7 @@ use Config::Simple;
 use DBI;
 use FindBin;
 use JSON;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../msgraph-perl/lib";
 
 use MsGroups;
 use MsGroup;

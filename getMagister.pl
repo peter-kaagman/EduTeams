@@ -13,7 +13,8 @@ use FindBin;
 use JSON;
 use File::Slurp;
 use Config::Simple;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../magister-perl/lib";
+use lib "$FindBin::Bin/../msgraph-perl/lib";
 
 use Magister; # Diverse magister functies
 use Logger; # Om te loggen
@@ -25,7 +26,7 @@ my $logger = Logger->new(
 $logger->make_log("$FindBin::Bin/$FindBin::Script started.");
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/config/EduTeamsTest.cfg", \%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/config/EduTeams.cfg", \%config) or die("No config: $!");
 #print Dumper \%config; exit 0;
 
 my $driver = $config{'DB_DRIVER'};

@@ -12,7 +12,7 @@ use FindBin;
 use Config::Simple;
 use JSON;
 use File::Slurp;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../../msgraph-perl/lib";
 
 use Logger; # Om te loggen
 

@@ -10,7 +10,7 @@ use Config::Simple;
 use Time::Piece;
 use Time::Seconds;
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../../msgraph-perl/lib";
 
 use MsGroups;
 use MsGroup;
