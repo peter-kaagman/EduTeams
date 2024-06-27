@@ -25,8 +25,6 @@ Create Table If Not Exists magisterteam(
 Create Table If Not Exists magisterdocentenrooster(
     docentid Integer Not Null,
     teamid Integer Not Null,
--- #13
-    -- Foreign Key (docentid) References magisterdocent(ROWID),
     Foreign Key (docentid) References users(ROWID),
     Foreign Key (teamid) References magisterteam(ROWID)
 );
@@ -37,8 +35,6 @@ Create Table If Not Exists magisterdocentenrooster(
 Create Table If Not Exists magisterleerlingenrooster(
     leerlingid Integer Not Null,
     teamid Integer Not Null,
-    -- #13
-    -- Foreign Key (leerlingid) References magisterleerling(ROWID),
     Foreign Key (leerlingid) References users(ROWID),
     Foreign Key (teamid) References magisterteam(ROWID)
 );
@@ -70,8 +66,6 @@ Create Table If Not Exists azureteam_members(
 Create Table If Not Exists azuredocrooster(
     azureteam_id Integer Not Null,
     azuredocent_id Integer Not Null,
-    -- #13
-    -- Foreign Key (azuredocent_id) References azuredocent(ROWID),
     Foreign Key (azuredocent_id) References users(ROWID),
     Foreign Key (azureteam_id) References azureteam(ROWID)
 );
@@ -79,8 +73,6 @@ Create Table If Not Exists azuredocrooster(
 Create Table If Not Exists azureleerlingrooster(
     azureteam_id Integer Not Null,
     azureleerling_id Integer Not Null,
-    -- #13
-    --Foreign Key (azureleerling_id) References azureleerling(ROWID),
     Foreign Key (azureleerling_id) References users(ROWID),
     Foreign Key (azureteam_id) References azureteam(ROWID)
 );

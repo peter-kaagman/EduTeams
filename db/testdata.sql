@@ -6,7 +6,8 @@ Insert Into users ('ROWID','stamnr','naam','upn','azureid') values
     (3,'234567','Test Leerling 1',  'b234567@ict-atlascollege.nl',  '2d6adf65-a0ce-43d5-a078-bdde1fea563c'),
     (4,'234568','Test Leerling 2',  'b234568@ict-atlascollege.nl',  'ccccb41d-292e-4b2a-90e1-80df05f12dae'),
     (5,'234569','Test Leerling 3',  'b234569@ict-atlascollege.nl',  '2c03712f-c3f3-4169-b3dc-de199398ba3e'),
-    (6,'234560','Test Leerling 4',  'b234560@ict-atlascollege.nl',  '911e64b1-ee37-4ffd-9ac3-fc6c60fece6d')
+    (6,'234560','Test Leerling 4',  'b234560@ict-atlascollege.nl',  '911e64b1-ee37-4ffd-9ac3-fc6c60fece6d'),
+    (7,'123458','Test Docent 3',    'docent3@ict-atlascollege.nl',  'e5814b22-aca9-471b-b538-9b7549fc404b')
 ;
 
 -- Test data voor op ictatlascollege
@@ -16,14 +17,14 @@ Insert Into magisterteam ('ROWID','naam','type') Values
 ;
 
 Insert Into magisterdocentenrooster ('docentid','teamid') values
-    ('1','2'),
-    ('1','1')
+    ('1','1'),
+    ('2','2')
 ;
 
 Insert Into magisterleerlingenrooster ('leerlingid','teamid') values
    ('3','1'),
-   ('3','2'),
    ('4','1'),
+   ('5','1'),
    ('4','2'),
    ('5','2'),
    ('6','2')

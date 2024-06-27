@@ -56,6 +56,8 @@ my $sth_azureteam = $dbh->prepare($qry);
 my $sth_users = $dbh->prepare("Select azureid,upn,ROWID From users");
 $sth_users->execute();
 my $usersByUpn = $sth_users->fetchall_hashref('upn');
+#say "usersByUpn: ";
+#print Dumper $usersByUpn;
 # ById is niet nodig, scheelt tijd en geheugen
 #$sth_users->execute();
 #my $usersById = $sth_users->fetchall_hashref('azureid');
@@ -111,6 +113,7 @@ if ($groups_object->_get_access_token){
         );
         # Member ophalen van het team
         my $members = $group_object->team_members();
+
         foreach my $member (@{$members}){
             # azuretem_members tabel bijwerken met MembershipId
             # deze is nodig bij het verwijderen van een teamlid.
@@ -118,6 +121,10 @@ if ($groups_object->_get_access_token){
             #print Dumper $member;
             #$qry = "Insert Into azureteam_members (teamid,user_azureid,user_memberid) values (?,?,?) ";
             $sth_azureteam_members->execute($team->{'id'},$member->{'userId'},$member->{'id'});
+            # say "Azure rooster";
+            # print Dumper $member;
+            # say "azureteamROWID => ", $azureteamROWID;
+            # say "memberrowid => ", $usersByUpn->{$member->{'email'}}->{'rowid'};
             if ($member->{'roles'}[0]){
                 # ROWID van docent en team is bekend => toevoegen aan azuredocrooster
                 # $qry = "Insert Into azuredocrooster (azureteam_id,azuredocent_id) values (?,?) ";
