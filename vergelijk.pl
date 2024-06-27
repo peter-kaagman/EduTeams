@@ -243,10 +243,10 @@ sub MagisterAzure{
                 # Azure bestaat 
                 # Eigenaren en leden controleren
                 # Eigenaren
+                say "magisterteam $magisternaam";
+                print Dumper $magisterteam;
                 foreach my $magister_azureid (keys %{$magisterteam->{'docenten'}}){
                     if (! $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid}){
-                        say "Team id?";
-                        print Dumper ;
                         push(@{$ToDo->{'Magister'}->{'MagisterMembersToevoegen'}->{$Azure->{$magisternaam}->{'id'}}->{'docenten'}}, $magister_azureid);
                         # Dit heeft impact op de controlle vanuit Azure, deze docent dus ook toevoegen aan de Azure hash
                         $Azure->{$magisternaam}->{'docenten'}->{$magister_azureid} = 'toegevoegd door Magister vergelijking'; # heb de naam hier niet beschikbaar
@@ -292,8 +292,13 @@ sub AzureMagister{
                 # Toevoegen gebeurt al vanuit Magister, alleen verwijderen dus
                 # Eigenaren
                 foreach my $azure_id (keys %{$azureteam->{'docenten'}}){
-                    if (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id}){
+                    #20 Check toegevoegd om docenten niet uit een Jaarlaag team te verwijderen
+                    if (
+                            (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id} ) &&
+                            ( $azurenaam !~ /^.+Jaarlaag$/i)
+                        ){
                         # Member id opzoeken
+                        say "Team $azurenaam";
                         $sth_memberid->execute($Azure->{$azurenaam}->{'id'}, $azure_id);
                         my $row = $sth_memberid->fetchrow_hashref;
                         push(@{$ToDo->{'Azure'}->{'AzureMemberVerwijderen'}->{ $Azure->{$azurenaam}->{'id'} } }, $row->{'user_memberid'});
@@ -319,6 +324,9 @@ sub AzureMagister{
 # Gegeven verzamelen
 AzureHash(); # <= maak een hash van wat we weten vanuit Azure
 MagisterHash(); # <= maak een hash van wat we weten vanuit Magister
+#say "MagisterHash";
+#print Dumper $Magister;
+#exit 1;
 
 #Vergelijkingen => ToDo hash maken
 MagisterAzure(); # Vergelijkt vanuit Magsiter gezien, koppelt terug in $ToDo maar wijzigt ook de AzureHash
@@ -327,6 +335,7 @@ AzureMagister(); # Vergelijkt vanuit Azure gezien, koppelt terug in $ToDo
 # We hebben nu een hash met wijzigingen die uitgevoerd moeten worden
 say "ToDo";
 print Dumper $ToDo if $ToDo;
+exit 1;
 #
 # Vanaf hier gaan we mutaties uitvoeren
 #
@@ -345,6 +354,7 @@ foreach my $NewClass (@{$ToDo->{'Magister'}->{'MagisterMaken'}}){
         createEduTeam($NewClass);
     }
 }
+
 # Een team bestaat in Azure maar niet in Magister => team archiveren #7
 # Deze was tijden #8 al gecontroleerd en functioneerd goed
 foreach my $Team2Archive (@{$ToDo->{'Azure'}->{'AzureArchiverenNietInMagister'}}){
@@ -404,7 +414,7 @@ while ( my( $teamid, $team ) = each(%{$ToDo->{'Magister'}->{'MagisterMembersToev
     if ($result->is_success){
         $logger->make_log("$FindBin::Bin/$FindBin::Script Info leden toegevoegd: ".encode_json($memberPayload));
     }else{
-        $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR fout bij leden toegevoegen: ".encode_json($result));
+        $logger->make_log("$FindBin::Bin/$FindBin::Script ERROR fout bij leden toegevoegen: ".encode_json($result->decoded_content));
     }
 }
 
@@ -438,34 +448,6 @@ if ($ToDo->{'Azure'}->{'AzureMemberVerwijderen'}){
 
 }
 
-exit 1; # ff niet verder gaan
-
-
-# # Een docent/lln staat bij een team in Azure maar niet in Magister => docent/lln verwijderen #10
-# ## AzureLeerlingVerwijderen
-# while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureLeerlingVerwijderen'}})){
-#     say "Lln verwijderen uit: $id";
-#     foreach my $lln_upn  (@{$array}){
-#         say "LLN id $lln_upn => $LlnId->{$lln_upn}";
-#         $group_object->team_removeMember($LlnId->{$lln_upn})
-#     }
-# }  
-# AzureDocentVerwijderen
-# while (my($id,$array) = each(%{$ToDo->{'Azure'}->{'AzureDocentVerwijderen'}})){
-#     say "Docent verwijderen uit: $id";
-#     my $group_object = MsGroup->new(
-#         'app_id'        => $config{'APP_ID'},
-#         'app_secret'    => $config{'APP_PASS'},
-#         'tenant_id'     => $config{'TENANT_ID'},
-#         'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
-#         'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-#         'select'        => '$select=id,displayName,userPrincipalName',
-#         'id'            => $id,
-#     );
-#     foreach my $docent_id  (@{$array}){
-#         $group_object->team_removeMember($docent_id)
-#     }
-# }  
 
 
 $logger->make_log("$FindBin::Bin/$FindBin::Script Beeindigd.");
