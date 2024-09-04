@@ -1,0 +1,12 @@
+*.cfg
+*.csv
+*.clixml
+*.xml
+*.log
+*.1
+*.gz
+*.sqlite
+*.pid
+cache/*
+Dump/*json
+documentatie/vergelijking.*

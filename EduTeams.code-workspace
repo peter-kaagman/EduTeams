@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../magister-perl"
+		},
+		{
+			"path": "../msgraph-perl"
+		},
+		{
+			"path": "../EduLeerling"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "EduTeams"
+	}
+}

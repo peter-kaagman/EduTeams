@@ -1,0 +1,56 @@
+# Azure settings
+# De app naam mag je zelf verzinnen, maar alle andere waarden
+# moeten komen uit een APP registratie in Azure
+APP_NAME EduTeams
+TENANT_ID <tenant_id>
+APP_ID <app_id>
+APP_PASS <app_pass>
+#ToDo: Deze endpoint lijken wel generiek te zijn en zouden
+# best een default in de MsGraph modules kunnen krijken
+GRAPH_ENDPOINT https://graph.microsoft.com
+LOGIN_ENDPOINT https://login.microsoftonline.com
+
+#Magister setting
+# Het IP vanwaaruit request naar Magister gezonden worden moet
+# bekend zijn bij Magister. Verder is er een account nodig
+# om te kunnen verbinden met decibel
+MAGISTER_URL https://<schoolnaam>.swp.nl:8800/doc
+MAGISTER_USER <magister_user>
+MAGISTER_SECRET <magister_secret>
+# Het lopende schooljaar
+MAGISTER_LESPERIODE 2324
+
+# Aktieve locaties is een regex waartegen groepnamen getest worden
+# Ik test op het eerste karakter van de naam, wat een code is voor de locaties.
+AKTIEVE_LOCATIES 0|2|8|9
+#AKTIEVE_LOCATIES 0
+
+# Bestand in de config map waarin de jaarlagen beschreven zijn
+JAARLAGEN jaarlagen_test.json
+# PID file naam in de run map waarin de sync script hun PID zetten als flag voor createTeam.pl
+PID_FILE EduTeams.pid
+# Een dry run maakt een data dump maar voert geen mutaties uit
+DRY_RUN 0
+# Data dump maken, wordt ook gemaakt tijdens een dry run
+DUMP 0
+DUMP_DIR Dump
+# Het aantal threads voor Magister en Azure voor Parallel::ForkManager
+# Voor mij lag het omslagpunt op 20 threads
+MAGISTER_THREADS    20
+AZURE_THREADS   20
+# Cache dir voor db en ForkManager, bij voorkeur een (25mb) ramdisk
+CACHE_DIR cache
+#Logger settings
+LOG_VERBOSE 1
+
+# Sanity check grenswaarden
+MAX_NEW_TEAMS 2
+MAX_TEAMS_DELETED 2
+MAX_NEW_USER 2
+MAX_USER_DELETED 2
+
+# Database settings
+DB_DRIVER SQLite
+DB_NAME eduteams.sqlite
+DB_USER ""
+DB_PASS ""
