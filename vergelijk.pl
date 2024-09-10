@@ -62,7 +62,7 @@ my $sth_class_created = $dbh->prepare('Insert Into teamcreated (timestamp, id, n
 
 # Users
 # Users dient als zoek hash 
-my $sth_users = $dbh->prepare("Select azureid,upn,ROWID From users");
+my $sth_users = $dbh->prepare("Select azureid,upn,ROWID,naam From users");
 $sth_users->execute();
 my $usersById = $sth_users->fetchall_hashref('azureid');
 
@@ -349,8 +349,31 @@ sub do_dryrun {
         say $!;
     }
     # ToDo
+    # Create an augmented ToDo for debugging purposes
+    my $sth_teams = $dbh->prepare("Select id,secureName From azureteam");
+    $sth_teams->execute();
+    my $teamsById = $sth_teams->fetchall_hashref('id');
+    $sth_teams->finish();
+    my $ToDo_augmented;
+    while (my ($action, $action_content) = each %{$ToDo}){
+        if ($action =~ /^Members.*/){
+            while (my($teamid,$team_content) = each %{$action_content}){
+                while (my($type, $type_content) = each %{$team_content}){
+                    # $type content is een array
+                    foreach my $userid (@{$type_content}){
+                        #say "$action $teamid $teamsById->{$teamid}->{'secureName'}  $type $userid $usersById->{$userid}->{'naam'}";
+                        push @{ $ToDo_augmented->{$action}->{ "$teamid=>$teamsById->{$teamid}->{'secureName'}" }->{$type} }, "$userid=>$usersById->{$userid}->{'naam'}";
+                    }
+                }
+            }
+        }else{
+            # Gewoon toevoegen
+            $ToDo_augmented->{$action} = $action_content;
+        }
+    }    
+
     if (open FH, '>:encoding(UTF-8)', "$FindBin::Bin/$config{'DUMP_DIR'}/$now-todo.json"){
-        print FH JSON->new->utf8->pretty->encode($ToDo);
+        print FH JSON->new->utf8->pretty->encode($ToDo_augmented);
         close FH;
     }else{
         say $!;
