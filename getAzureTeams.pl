@@ -138,6 +138,7 @@ if ($groups_object->_get_access_token){
         # description en displayName kunnen aangepast zijn, naam halen uit de mailNick
         $team->{'mailNickname'} =~ /^EduTeam_($config{'MAGISTER_LESPERIODE'}.+)/;
         $team->{'secureName'} = $1;
+        $logger->make_log("$FindBin::Script INFO Leden ophalen voor $team->{'secureName'}");
         my $pid = $pm->start($team->{'secureName'}) and next MEMBERS; # FORK
         #say "In runner";
         my $group_object = MsGroup->new(
