@@ -17,7 +17,7 @@ use Config::Simple;
 use DBI;
 use FindBin;
 use JSON;
-use Switch;
+#use Switch;
 use Parallel::ForkManager;
 use Time::Piece;
 use Time::Seconds;
