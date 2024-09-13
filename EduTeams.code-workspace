@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../EduLeerling"
+		},
+		{
+			"path": "../inactive_ports"
 		}
 	],
 	"settings": {

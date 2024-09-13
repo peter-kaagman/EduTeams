@@ -3,9 +3,9 @@
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 
-if [ ! -f ${SCRIPTPATH}/cache/eduteams.sqlite ]; then
-    sqlite3 ${SCRIPTPATH}/cache/eduteams.sqlite ".read ${SCRIPTPATH}/db/schema.sql"
-fi
+rm ${SCRIPTPATH}/cache/eduteams.sqlite
+sqlite3 ${SCRIPTPATH}/cache/eduteams.sqlite ".read ${SCRIPTPATH}/db/schema.sql"
+sleep 2
 
 ${SCRIPTPATH}/getUsers.pl && \
 ${SCRIPTPATH}/getMagister.pl && \
