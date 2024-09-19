@@ -14,6 +14,12 @@
 		},
 		{
 			"path": "../inactive_ports"
+		},
+		{
+			"path": "../presence"
+		},
+		{
+			"path": "../Tuinpomp"
 		}
 	],
 	"settings": {

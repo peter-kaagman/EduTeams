@@ -1,0 +1,35 @@
+<div id="about-content">
+<h1>About this App...</h1>
+<table>
+    <tbody>
+    <tr>
+        <td>Perl version</td>
+        <td><span class="app-info"><% perl_version %></span></td>
+    </tr>
+    <tr>
+        <td>Dancer2 version</td>
+        <td><span class="app-info"><% dancer_version %></span></td>
+    </tr>
+    <tr>
+        <td>Backend</td>
+        <td><span class="app-info"><% settings.apphandler %></span></td>
+    </tr>
+    <tr>
+        <td>Appdir</td>
+        <td><span class="filepath">/home/pkn/Documenten/scripts/Edu/EduTeams/insight</span></td>
+    </tr>
+    <tr>
+        <td>Template engine</td>
+        <td><span class="app-info"><% settings.template %></span></td>
+    </tr>
+    <tr>
+        <td>Logger engine</td>
+        <td><span class="app-info"><% settings.logger %></span></td>
+    </tr>
+    <tr>
+        <td>Running environment</td>
+        <td><span class="app-info"><% settings.environment %></span></td>
+    </tr>
+    </tbody>
+</table>
+</div>

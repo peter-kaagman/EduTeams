@@ -10,3 +10,5 @@
 cache/*
 Dump/*json
 documentatie/vergelijking.*
+config_local.yml
+insight/sessions/*

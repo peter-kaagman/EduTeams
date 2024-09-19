@@ -56,13 +56,13 @@ my $users_object = MsUsers->new(
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
 	#'filter'        => '$filter=endswith(mail,\'atlascollege.nl\')', 
-	#'filter'        => '$filter=userType eq \'Member\'', 
+	'filter'        => '$filter=userType eq \'Member\'', 
     'select'        => '$select=id,displayName,userPrincipalName',
 	#'consistencylevel' => 'eventual',
 );
 
 
-my $users = $users_object->users_fetch;
+my $users = $users_object->users_fetch();
 $logger->make_log("$FindBin::Script ".@{$users}." users");
 foreach my $user (@{$users}){
 	#say $user->{'id'}," => ", $user->{'userPrincipalName'}," => ", $user->{'displayName'};
