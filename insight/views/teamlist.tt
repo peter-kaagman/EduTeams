@@ -1,9 +1,12 @@
-<script src="/javascripts/teamlist.js"></script>
-<div id='teamlist'>
-    <div id='teamlist_header'>
+<div class='row row-content-header'>
         <h1>Lijst van teams.</h1>
-    </div>
-    <div id='teamlist_content'>
-        <div id='teamlist_table'></div>
-    </div>
 </div>
+<% INCLUDE includes/navbar.tt %>
+<div class='row row-team-table'>
+    <div id='teamlist_table' class='col-md-12'></div>
+</div>
+<script src="/javascripts/teamlist.js"></script>
+
+
+
+

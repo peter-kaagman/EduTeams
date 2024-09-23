@@ -1,0 +1,12 @@
+<div class='row row-navbar'>
+        <INPUT type='HIDDEN' id='rowCount'>
+        <INPUT type='HIDDEN' id='rowStart'>
+
+        <div class='col-md-2'>&nbsp;</div>
+        <div class='col-md-1'><INPUT type="button" id='navFirst'  value='&lt;&lt;'></div>
+        <div class='col-md-1'><INPUT type="button" id='navPrev'   value='&lt;'></div>
+        <div class='col-md-4'><input type='text'   id='navSearch' placeholder='zoeken'></div>
+        <div class='col-md-1'><INPUT type="button" id='navNext'   value='&gt;'></div>
+        <div class='col-md-1'><INPUT type="button" id='navLast'   value='&gt;&gt;'></div>
+        <div class='col-md-2'>&nbsp;</div>
+</div>

@@ -1,0 +1,5 @@
+    <div id="footer" class="row row-footer">
+      <div class="col-md-12">
+        A PKn site, powered by <a href="http://perldancer.org/">Dancer2</a> <% dancer_version %>
+      </div>
+    </div>

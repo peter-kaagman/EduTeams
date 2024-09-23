@@ -1,22 +1,55 @@
 document.addEventListener("DOMContentLoaded", function() {
     console.log("Document loaded");
-    console.log(window.location.pathname);
-    console.log('blaat');
-    getTeamList();
-    // // Interval function to do a refresh
-    // setInterval( function(){
-    //     console.log("refresh triggered");
-    //     doRefresh();
-    // }, 1000 * 60 * 5);
-    // Haal de teams op
-    function getTeamList(){
+
+    // Init
+    // var currentRow = 1;
+    var pageSize = 25;
+
+    // Register EventHandlers for the navBar
+    document.querySelector("#navFirst").addEventListener("click", (e) =>{
+        getTeamList(0,pageSize)
+    });
+    document.querySelector("#navPrev").addEventListener("click", (e) =>{
+        //var rowCount = document.querySelector('#rowCount').value;
+        var rowStart = document.querySelector('#rowStart').value;
+        var newStart = rowStart - pageSize;
+        if (newStart < 0){
+            console.log('reset naar 0');
+            newStart = 0;
+        }
+        getTeamList(newStart,pageSize);
+    });
+    document.querySelector("#navNext").addEventListener("click", (e) =>{
+        var rowCount = document.querySelector('#rowCount').value;
+        var rowStart = document.querySelector('#rowStart').value;
+        var newStart = Number(rowStart) + Number(pageSize);
+        if (newStart >= rowCount){
+            console.log('reset naar rowCount - page');
+            newStart = Number(rowCount) - Number(pageSize);
+        }
+        getTeamList(newStart,pageSize);
+    });
+    document.querySelector("#navLast").addEventListener("click", (e) =>{
+        var rowCount = document.querySelector('#rowCount').value;
+        getTeamList(Number(rowCount)-Number(pageSize),pageSize)
+    });
+    document.querySelector("#navSearch").addEventListener("keyup", (e) =>{
+        console.log('search keyup');
+        console.log(e)
+        var searchFor = document.querySelector("#navSearch").value;
+        if(searchFor.length > 2){
+            getTeamList(0,pageSize,searchFor);
+        }else{
+            getTeamList(0,pageSize);
+        }
+    });
+
+    getTeamList(0,pageSize);
+
+
+    
+    function getTeamList(from,page,search){
         console.log('getTeamList');
-        // fetch('/api/getTeamList')
-        // .then( res => {
-        //     return res.json();
-        // })
-        // .then( data => {
-        //     console.log(data);
         var teamTable = document.querySelector('#teamlist_table');
         if (teamTable){
             const table = document.createElement(`table`);
@@ -24,6 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const aRow = document.createElement(`tr`);
             const aCell = document.createElement(`td`);
             const aHead = document.createElement(`th`);
+            const aLink = document.createElement(`a`);
         
             // Headers
             const row = aRow.cloneNode();
@@ -38,19 +72,29 @@ document.addEventListener("DOMContentLoaded", function() {
             row.append(headerLLN);
             table.append(row);
 
-            fetch("/api/getTeamList")
+            var request = `/api/getTeamList/${from}/${page}/${search}`;
+            console.log(request);
+            fetch(request)
             .then( res => {
               return res.json();
             })
             .then( data => {
-                for (const[secureName, team] of Object.entries(data)){
-                // data.forEach(obj =>{
+                document.querySelector('#rowCount').value = data.rowCount.count;
+                document.querySelector('#rowStart').value = data.rowCount.start;
+                //console.log(document.querySelector('#rowStart').value);
+                console.log(data.teams);
+                for (const[naam, team] of Object.entries(data.teams).sort()){
                     const row = aRow.cloneNode();
                     row.style.cssText += `border-bottom: 2pt solid ${team.color};`;
                     //Name
-                    const cellSecureName = aCell.cloneNode();
-                    cellSecureName.textContent = secureName;
-                    row.append(cellSecureName);
+                    const teamLink = document.createElement('a');
+                    teamLink.innerHTML = naam;
+                    teamLink.href = `/teamDetail/${naam}`;
+                    console.log(teamLink);
+                    const cellNaam = document.createElement('td');
+                    cellNaam.append(teamLink);
+                    //console.log(naam);
+                    row.append(cellNaam);
                     //Docenten
                     const cellDocenten = aCell.cloneNode();
                     cellDocenten.textContent = team.docenten;
@@ -65,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 teamTable.append(table);
             })
             .catch( err => {
-                console.warn('Oeps getGroepen', err);
+                console.warn('Oeps getTeams', err);
             });
         }
     }

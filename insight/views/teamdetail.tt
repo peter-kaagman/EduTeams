@@ -1,0 +1,61 @@
+
+<div class='row row-page-header'>
+    <h1>Team info.</h1>
+</div>
+
+<div class='row row-page-subheader'>
+    <h2>Magister</h2>
+</div>
+<div class='row row-page-detail'>
+    <div class='col-md-2'>Naam:</div><div class='col-md-10'> <% teamInfo.magister.naam %></div>
+    <div class='col-md-2'>Type:</div><div class='col-md-10'> <% teamInfo.magister.type %></div>
+</div>
+
+<div class='row row-page-subheader'>
+    <h2>Teams</h2>
+</div>
+<div class='row row-page-detail'>
+    <%IF teamInfo.azure.secureName %>
+        <div class='col-md-2'>Naam:</div><div class='col-md-10'> <% teamInfo.azure.secureName %></div>
+        <div class='col-md-2'>displayName:</div><div class='col-md-10'> <% teamInfo.azure.displayName %></div>
+        <div class='col-md-2'>Description:</div><div class='col-md-10'> <% teamInfo.azure.description %></div>
+    <% ELSE%>
+        <p class='warning'>Dit team bestaat niet in Azure/Teams</p>
+        <% IF !teamInfo.leerlingen %>
+            <p class='warming'>Dit team heeft geen leerlingen.</p>
+        <% END %>
+    <% END %>
+</div>
+
+<div class='row row-team-subheader'>
+    <h2>Docenten:</h2>
+</div>
+<div class='row row-page-detail'>
+    <% IF teamInfo.docenten.keys.size > 0 %>
+        <div class='col-md-4'>Naam</div><div class='col-md-8'>E-Mail</div>
+        <% FOREACH key IN teamInfo.docenten.keys.sort %>
+            <div class='col-md-4'><% teamInfo.docenten.$key.naam %></div><div class='col-md-8'><% teamInfo.docenten.$key.upn %></div>
+        <% END %>
+    <% ELSE%>
+        <p class='warning'>Dit team heeft geen docenten en zal dus niet bestaan in Teams/Azure.</p>
+    <% END %>
+</div>
+
+<div class='row row-team-subheader'>
+    <h2>Leerlingen:</h2>
+    
+</div>
+<div class='row row-page-detail'>
+    <% IF teamInfo.leerlingen.keys.size > 0 %>
+        <div class='col-md-4'>Naam</div><div class='col-md-8'>E-Mail</div>
+        <% FOREACH key IN teamInfo.leerlingen.keys.sort %>
+            <div class='col-md-4'><% teamInfo.leerlingen.$key.naam %></div><div class='col-md-8'><% teamInfo.leerlingen.$key.upn %></div>
+        <% END %>
+    <% ELSE%>
+        <p class='warning'>Dit team heeft geen leerlingen en zal dus niet bestaan in Teams/Azure.</p>
+    <% END %>
+</div>
+
+
+
+

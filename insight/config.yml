@@ -35,6 +35,8 @@ engines:
       # Note: start_tag and end_tag are regexes
       start_tag: '<%'
       end_tag:   '%>'
+      # RELATIVE: 1
+
 
 # template: "template_toolkit"
 # engines:

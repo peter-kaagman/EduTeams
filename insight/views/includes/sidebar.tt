@@ -1,0 +1,25 @@
+                <ul id="sidebar-items">
+                  <li>
+                    <h3>EduTeams Insight</h3>
+                    <ul class="links">
+
+                      <li><a href="/">Teams</a></li>
+                      <li><a href="/docenten">Docenten</a></li>
+                      <li><a href="/leerlingen">Leerling</a></li>
+                      <li><a href="/about">About</a></li>
+                    </ul>
+                  </li>
+
+
+                  <li>
+                    <h3>Environment</h3>
+
+                    <ul>
+                        <li>Location: <span class="filepath">een</span></li>
+                        <li>Template engine: <span class="app-info">twee</span></li>
+                        <li>Logger: <span class="app-info">drie</span></li>
+                        <li>Environment: <span class="app-info">vier</span></li>
+                    </ul>
+
+                  </li>
+                </ul>

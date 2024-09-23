@@ -4,46 +4,31 @@
   <meta charset="<% settings.charset %>">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title><% title %></title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
   <link rel="stylesheet" href="<% request.uri_base %>/css/style.css">
 </head>
 <body>
+  <script>0</script>
+  <div class="container">
 
-<div id="page">
-      <div id="sidebar">
-        <ul id="sidebar-items">
-          <li>
-            <h3>EduTeams Insight</h3>
-            <ul class="links">
-
-              <li><a href="/">Teams</a></li>
-              <li><a href="/docenten">Docenten</a></li>
-              <li><a href="/leerlingen">Leerling</a></li>
-              <li><a href="/about">About</a></li>
-            </ul>
-          </li>
-
-
-          <li>
-            <h3>Environment</h3>
-
-            <ul>
-                <li>Location: <span class="filepath">/home/pkn/Documenten/scripts/Edu/EduTeams/insight</span></li>
-                <li>Template engine: <span class="app-info"><% settings.template %></span></li>
-                <li>Logger: <span class="app-info"><% settings.logger %></span></li>
-                <li>Environment: <span class="app-info"><% settings.environment %></span></li>
-            </ul>
-
-          </li>
-        </ul>
-
-      </div>
-
-      <div id="content">
-<% content %>
+    <div class="row">
+            <div class='col-md-8 col-content'>
+              <% content %>
+            </div>
+            <div class='col-md-4 col-sidebar'>
+              <% INCLUDE 'includes/sidebar.tt' %>
+            </div>
     </div>
-  </div>
-<div id="footer">
-A PKn site, powered by <a href="http://perldancer.org/">Dancer2</a> <% dancer_version %>
-</div>
+
+    <% INCLUDE 'includes/footer.tt' %>
+
+  </div> <!-- container -->
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+
 </body>
 </html>
