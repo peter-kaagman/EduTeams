@@ -6,7 +6,8 @@ Create Table If Not Exists users(
     upn Text Unique Not Null,
     memberid Text,
     stamnr Text,
-    naam Text
+    naam Text,
+    locatie Text
 );
 
 --
@@ -16,6 +17,7 @@ Create Table If Not Exists users(
 --
 Create Table If Not Exists magisterteam(
     naam Text Not Null Unique,
+    locatie Text,
     type Text 
 );
 
@@ -48,7 +50,8 @@ Create Table If Not Exists azureteam(
     id Text Not Null Unique,
     description Text Not Null,
     displayName Text Not Null,
-    secureName Text Not Null
+    secureName Text Not Null,
+    locatie Text
 );
 
 Create Table If Not Exists azuredocrooster(
