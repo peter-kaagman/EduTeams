@@ -25,6 +25,18 @@ my $logger = Logger->new(
     'verbose' => $config{'LOG_VERBOSE'}
 );
 
+my $locaties = {
+	'Service Centrum' => 'ASC',
+	'ROWF' => 'ROWF',
+   	'OSG West-Friesland' => 'OSG',
+   	'Copernicus SG' => 'CSG',
+   	'SG De Dijk' => 'DDK',
+   	'SG Newton' => 'NWT',
+   	'SG De Triade' => 'TRI',
+   	'ROC Triade'	=>	'TRIROC'
+};
+
+
 my $driver = $config{'DB_DRIVER'};
 my $db = "$FindBin::Bin/".$config{'CACHE_DIR'}."/".$config{'DB_NAME'};
 my $db_user = $config{'DB_USER'};
@@ -46,7 +58,7 @@ if (
 
 # users
 $dbh->do('Delete From users'); # Truncate the table 
-my $qry = "Insert Into users (upn, azureid, naam) values (?,?,?) ";
+my $qry = "Insert Into users (upn, azureid, naam, locatie,stamnr) values (?,?,?,?,?) ";
 my $sth_users_add = $dbh->prepare($qry);
 
 my $users_object = MsUsers->new(
@@ -57,7 +69,7 @@ my $users_object = MsUsers->new(
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
 	#'filter'        => '$filter=endswith(mail,\'atlascollege.nl\')', 
 	'filter'        => '$filter=userType eq \'Member\'', 
-    'select'        => '$select=id,displayName,userPrincipalName',
+    'select'        => '$select=id,displayName,userPrincipalName,Department,employeeId',
 	#'consistencylevel' => 'eventual',
 );
 
@@ -65,18 +77,36 @@ my $users_object = MsUsers->new(
 my $users = $users_object->users_fetch();
 $logger->make_log("$FindBin::Script ".@{$users}." users");
 foreach my $user (@{$users}){
+	next unless $user->{'department'};
+	# say Dumper $user;
 	#say $user->{'id'}," => ", $user->{'userPrincipalName'}," => ", $user->{'displayName'};
 	
 	# Geen onmicrosoft gebruikers toevoegen
 	#56 Kwam er achter dat in de life omgeving gasten soms lid zijn van teams
 	# moet deze gebruikers dus wel toevoegen
 	# if ($user->{'userPrincipalName'} !~ /.*onmicrosoft.*/i){
-	#my $qry = "Insert Into users (upn, azureid, naam) values (?,?,?) ";
-		$sth_users_add->execute(
+	#my $qry = "Insert Into users (upn, azureid, naam, locatie) values (?,?,?,?) ";
+# my $locaties = {
+#    "OSG West-Friesland" => 'OSG',
+#    "Copernicus SG" => 'CSG',
+#    "SG De Dijk" => 'DDK',
+#    "SG Newton" => 'NWT',
+#    'SG De Triade' => 'TRI'
+# };
+	my $locatie;
+	if ( ($user->{'department'}) && ($locaties->{ $user->{'department'} }) ){
+		 $locatie = $locaties->{$user->{ 'department'} }
+	}else{
+		#say Dumper $user;
+		$locatie = '99';
+	}
+	$sth_users_add->execute(
 		lc($user->{'userPrincipalName'}),
 		$user->{'id'},
-		$user->{'displayName'}
-	);
+		$user->{'displayName'},
+		$locatie,
+		$user->{'employeeId'}
+	) unless ($locatie eq '99')
 	# }else{
 		# $logger->make_log("$FindBin::Script INFO skipping $user->{'userPrincipalName'}");
 	# }

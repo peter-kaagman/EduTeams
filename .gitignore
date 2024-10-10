@@ -9,6 +9,6 @@
 *.pid
 cache/*
 Dump/*json
-documentatie/vergelijking.*
+documentatie/*
 config_local.yml
 insight/sessions/*
