@@ -68,31 +68,16 @@ my $users_object = MsUsers->new(
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
 	#'filter'        => '$filter=endswith(mail,\'atlascollege.nl\')', 
-	'filter'        => '$filter=userType eq \'Member\'', 
+	#'filter'        => '$filter=userType eq \'Member\'', 
     'select'        => '$select=id,displayName,userPrincipalName,Department,employeeId',
 	#'consistencylevel' => 'eventual',
 );
 
 
-my $users = $users_object->users_fetch();
+my $users = $users_object->users_fetch(1); # 1 is showAll
 $logger->make_log("$FindBin::Script ".@{$users}." users");
 foreach my $user (@{$users}){
 	next unless $user->{'department'};
-	# say Dumper $user;
-	#say $user->{'id'}," => ", $user->{'userPrincipalName'}," => ", $user->{'displayName'};
-	
-	# Geen onmicrosoft gebruikers toevoegen
-	#56 Kwam er achter dat in de life omgeving gasten soms lid zijn van teams
-	# moet deze gebruikers dus wel toevoegen
-	# if ($user->{'userPrincipalName'} !~ /.*onmicrosoft.*/i){
-	#my $qry = "Insert Into users (upn, azureid, naam, locatie) values (?,?,?,?) ";
-# my $locaties = {
-#    "OSG West-Friesland" => 'OSG',
-#    "Copernicus SG" => 'CSG',
-#    "SG De Dijk" => 'DDK',
-#    "SG Newton" => 'NWT',
-#    'SG De Triade' => 'TRI'
-# };
 	my $locatie;
 	if ( ($user->{'department'}) && ($locaties->{ $user->{'department'} }) ){
 		 $locatie = $locaties->{$user->{ 'department'} }
@@ -106,9 +91,6 @@ foreach my $user (@{$users}){
 		$user->{'displayName'},
 		$locatie,
 		$user->{'employeeId'}
-	) unless ($locatie eq '99')
-	# }else{
-		# $logger->make_log("$FindBin::Script INFO skipping $user->{'userPrincipalName'}");
-	# }
+	); # unless ($locatie eq '99')
 }
 $logger->make_log("$FindBin::Script INFO einde");

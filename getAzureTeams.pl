@@ -127,6 +127,7 @@ if ($groups_object->_get_access_token){
             #print Dumper $member;
             if (! $owners->{ $usersByUpn->{ lc($member->{'userPrincipalName'}) }->{'rowid'}  }){
                 #$qry = "Insert Into azureleerlingrooster (azureteam_id,azureleerling_id) values (?,?) ";
+		#say "$team->{'displayName'} :$teamROWID => $member->{'userPrincipalName'} => $usersByUpn->{ lc($member->{'userPrincipalName'}) }->{'rowid'}";
                 $sth_azureleerlingrooster->execute($teamROWID, $usersByUpn->{ lc($member->{'userPrincipalName'}) }->{'rowid'});
             }
          }
