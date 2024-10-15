@@ -17,7 +17,7 @@ use MsGroup;
 
 
 my %config;
-Config::Simple->import_from("$FindBin::Bin/config/EduTeams.cfg",\%config) or die("No config: $!");
+Config::Simple->import_from("$FindBin::Bin/../config/EduTeams.cfg",\%config) or die("No config: $!");
 
 my $groups_object = MsGroups->new(
 	'app_id'        => $config{'APP_ID'},
@@ -25,7 +25,7 @@ my $groups_object = MsGroups->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	'filter'        => '$filter=startswith(displayName,\'CSG\')',
+	#'filter'        => '$filter=startswith(displayName,\'CSG\')',
     'select'        => '$select=id,displayName,description,mailNickname,createdDateTime',
 );
 

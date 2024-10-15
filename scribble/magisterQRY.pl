@@ -24,6 +24,16 @@ my $mag_session= Magister->new(
     'lesperiode'    => $config{'MAGISTER_LESPERIODE'}
 
 );
+#{
+#            'KlasGroep' => '0v6.in1',
+#            'email' => 'f.vonck@atlascollege.nl',
+#            "\x{feff}stamnummer" => '126089',
+#            'LocatieCode' => 'OSG'
+#},
 
-my $blaat = $mag_session->getLayout('EduTeam-Doc-lesgroep','lesperiode=2425');
-say Dumper $blaat;
+my $groepen = $mag_session->getLayout('EduTeam-Doc-lesgroep','lesperiode=2425');
+my $groepen_uniek;
+foreach my $groep (@{$groepen}){
+	$groepen_uniek->{$groep->{'KlasGroep'}}++;
+}
+print Dumper $groepen_uniek;
