@@ -14,7 +14,7 @@ use JSON;
 use File::Slurp;
 use Config::Simple;
 use Time::Piece;
-use Parallel::ForkManager;
+#use Parallel::ForkManager;
 use lib "$FindBin::Bin/../magister-perl/lib";
 use lib "$FindBin::Bin/../msgraph-perl/lib";
 use lib "$FindBin::Bin/lib";
@@ -138,16 +138,16 @@ sub Docenten {
             # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
             if ($rowidDoc){
                 #say Dumper $lesgroep;
-        my ($rowidTeam, $formattedTeamName);
-        if ($lesgroep->{'KlasGroep'} =~ /^\d.+\..+/){
-                $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'};
-                $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
-        }else{
-                $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'}.'-'.$lesgroep->{'Vak'};
-                $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
-        }
+                my ($rowidTeam, $formattedTeamName);
+                if ($lesgroep->{'KlasGroep'} =~ /^\d.+\..+/){
+                        $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'};
+                        $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
+                }else{
+                        $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'}.'-'.$lesgroep->{'Vak'};
+                        $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
+                }
                 # Er zijn nu voldoende gevens om hier een rooster entry voor te maken
-        $logger->make_log("$FindBin::Script INFO $lesgroep->{'email'} : $rowidDoc => $formattedTeamName : $rowidTeam");
+                $logger->make_log("$FindBin::Script INFO $lesgroep->{'email'} : $rowidDoc => $formattedTeamName : $rowidTeam");
                 #my $qry = "Insert Into magisterdocentenrooster (docid,teamid) values (?,?) ";
                 $sth_magisterdocentenrooster->execute($rowidDoc,$rowidTeam);
             }else{
@@ -235,7 +235,7 @@ sub Leerlingen {
             # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
             my $rowidTeam = $TeamsHoH->{$formattedTeamName};
             if ($rowidTeam){
-              say "Deze wel $lesgroep->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
+		    #say "Deze wel $lesgroep->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
               # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
               $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
             }else{

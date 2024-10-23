@@ -15,6 +15,12 @@ get '/' => sub {
 	};
 };
 
+get '/docenten' => sub {
+    template 'staflist' => { 
+		'title' => 'insight-staflist'
+	};
+};
+
 get '/about' => sub {
     template 'about' => { 'title' => 'about insight' };
 };
@@ -126,5 +132,49 @@ get '/api/getTeamList/:start/:page/:search' => sub {
 	send_as JSON => $reply, { content_type => 'application/json; charset=UTF-8' }
 };
 
+get '/api/getStafList/:start/:page/:search' => sub {
+	my $start = route_parameters->get('start');# || 0;
+	my $page = route_parameters->get('page');# || 25;
+	my $search = route_parameters->get('search');
+	say "Route parameter $start $page $search";
+
+	# Need an unpages rowCount;
+	my $sth = database->prepare('Select count(rowid) as count From users Where type = \'staf\'');
+	$sth->execute();
+	my $rowCount = $sth->fetchrow_hashref();
+	$rowCount->{'start'} = $start;
+	my $reply->{'rowCount'} = $rowCount;
+	$sth->finish;
+
+# Select 
+#     users.naam,
+#     (
+#         Select count(magisterdocentenrooster.rowid) 
+#         From magisterdocentenrooster 
+#         Where magisterdocentenrooster.docentid = users.rowid
+#     ) as teamcount
+# From Users 
+# Where 
+#     users.type = 'staf' 
+
+	my $qry = 'Select users.rowid,users.naam,users.upn,users.locatie';
+	$qry .= "\n,(Select count(teamid) From magisterdocentenrooster Where docentid = users.rowid) as teamcount ";
+	$qry .= "\nFrom users ";
+	$qry .= "Where users.type = 'staf' ";
+	$qry .= "And users.upn Like '\%\@atlascollege.nl' ";
+	if ($search ne 'undefined'){
+		$qry .= "\nAnd users.naam Like '%$search%'"
+	}
+	$qry .= "\nOrder By users.naam ";
+	$qry .= "\nLimit $page Offset $start";
+	say $qry;
+	$sth = database->prepare($qry) or die $!;
+	$sth->execute();
+	my $users = $sth->fetchall_hashref('naam');
+	$reply->{'users'} = $users;
+	$sth->finish();
+	#print Dumper $reply;
+	send_as JSON => $reply, { content_type => 'application/json; charset=UTF-8' }
+};
 
 true;

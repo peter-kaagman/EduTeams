@@ -58,7 +58,7 @@ if (
 
 # users
 $dbh->do('Delete From users'); # Truncate the table 
-my $qry = "Insert Into users (upn, azureid, naam, locatie,stamnr) values (?,?,?,?,?) ";
+my $qry = "Insert Into users (upn, azureid, naam, locatie,stamnr,type) values (?,?,?,?,?,?) ";
 my $sth_users_add = $dbh->prepare($qry);
 
 my $users_object = MsUsers->new(
@@ -85,12 +85,19 @@ foreach my $user (@{$users}){
 		#say Dumper $user;
 		$locatie = '99';
 	}
+	my $type;
+	if ($user->{'userPrincipalName'} =~ /^b\d{6}\@atlascollege.nl/){
+		$type = 'lln';
+	}else{
+		$type = 'staf';
+	}
 	$sth_users_add->execute(
 		lc($user->{'userPrincipalName'}),
 		$user->{'id'},
 		$user->{'displayName'},
 		$locatie,
-		$user->{'employeeId'}
+		$user->{'employeeId'},
+		$type
 	); # unless ($locatie eq '99')
 }
 $logger->make_log("$FindBin::Script INFO einde");

@@ -7,7 +7,8 @@ Create Table If Not Exists users(
     memberid Text,
     stamnr Text,
     naam Text,
-    locatie Text
+    locatie Text,
+    type Text
 );
 
 --

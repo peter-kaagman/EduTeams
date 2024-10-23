@@ -1,0 +1,12 @@
+<div class='row row-content-header'>
+        <h1>Lijst van medewerkers.</h1>
+</div>
+<% INCLUDE includes/navbar.tt %>
+<div class='row row-staf-table'>
+    <div id='staflist_table' class='col-md-12'></div>
+</div>
+<script src="/javascripts/staflist.js"></script>
+
+
+
+
