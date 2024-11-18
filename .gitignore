@@ -4,7 +4,7 @@
 *.xml
 *.log
 *.1
-*.gz
+*gz
 *.sqlite
 *.pid
 cache/*
@@ -12,3 +12,4 @@ Dump/*json
 documentatie/*
 config_local.yml
 insight/sessions/*
+*old

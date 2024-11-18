@@ -286,15 +286,16 @@ sub AzureMagister{
                 # Toevoegen gebeurt al vanuit Magister, alleen verwijderen dus
 
                 # Eigenaren
-                foreach my $azure_id (keys %{$azureteam->{'docenten'}}){
-                    #20 Check toegevoegd om docenten niet uit een Jaarlaag team te verwijderen
-                    if (
-                            (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id} ) &&
-                            ( $azurenaam !~ /^.+Jaarlaag$/i)
-                        ){
-                        push(@{$ToDo->{'MembersVerwijderen'}->{ $Azure->{$azurenaam}->{'id'} }->{'docenten'} }, $usersById->{$azure_id}->{'azureid'});
-                    }
-                }
+                # Bespreking 7 nov 2024 => Docenten niet meer verwijderen
+                # foreach my $azure_id (keys %{$azureteam->{'docenten'}}){
+                #     #20 Check toegevoegd om docenten niet uit een Jaarlaag team te verwijderen
+                #     if (
+                #             (! $Magister->{$azurenaam}->{'docenten'}->{$azure_id} ) &&
+                #             ( $azurenaam !~ /^.+Jaarlaag$/i)
+                #         ){
+                #         push(@{$ToDo->{'MembersVerwijderen'}->{ $Azure->{$azurenaam}->{'id'} }->{'docenten'} }, $usersById->{$azure_id}->{'azureid'});
+                #     }
+                # }
                 # Leerlingen
                 foreach my $azure_id (keys %{$azureteam->{'leerlingen'}}){
                     if (! $Magister->{$azurenaam}->{'leerlingen'}->{$azure_id}){
