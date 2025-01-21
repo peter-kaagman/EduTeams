@@ -13,6 +13,7 @@ use lib "$FindBin::Bin/../../msgraph-perl/lib";
 
 use MsGroups;
 use MsGroup;
+use MsUser;
 
 
 my %config;
@@ -35,7 +36,7 @@ my $group_object = MsGroup->new(
 	'tenant_id'     => $config{'TENANT_ID'},
 	'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
-	'select'        => '$select=id,displayName,userPrincipalName,employeeId,createdDateTime',
+	'select'        => '$select=id,displayName,userPrincipalName,employeeId,createdDateTime,accountEnabled',
     'id'            => $groups_object->group_find_id('personeel'),
     'access_token'  => $groups_object->_get_access_token,
     'token_expires' => $groups_object->_get_token_expires,
@@ -43,9 +44,11 @@ my $group_object = MsGroup->new(
 
 my $members = $group_object->group_fetch_members;
 
+my $i = 0;
 foreach my $member (@{$members}){
-    if (! $member->{'employeeId'}){
-        printf("%-40s %-30s %s\n",$member->{'userPrincipalName'},$member->{'displayName'},$member->{'createdDateTime'}) ;
+    if ( (! $member->{'employeeId'})&& ($member->{'accountEnabled'}) ){
+		$i++;
+        printf("%3s %-40s %-30s %s\n",$i, $member->{'userPrincipalName'},$member->{'displayName'},$member->{'createdDateTime'}) ;
     }
 }
 

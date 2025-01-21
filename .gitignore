@@ -2,13 +2,15 @@
 *.csv
 *.clixml
 *.xml
-*.log
+
+
 *.1
 *gz
 *.sqlite
 *.pid
 cache/*
-Dump/*json
+Dump/*
+Log/*
 documentatie/*
 config_local.yml
 insight/sessions/*

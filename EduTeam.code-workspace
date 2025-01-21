@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../EduLeerling"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../msgraph-perl"
+		},
+		{
+			"path": "../magister-perl"
+		}
+	],
+	"settings": {}
+}

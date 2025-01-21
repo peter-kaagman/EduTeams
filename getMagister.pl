@@ -159,94 +159,100 @@ sub Docenten {
 }
 
 sub Leerlingen {
-    # We gaan niet langer per leerling de roosters opvragen
-    # we vragen echter een tweetal custom queries op voor vakken en groepen
+    # # We gaan niet langer per leerling de roosters opvragen
+    # # we vragen echter een tweetal custom queries op voor vakken en groepen
+    my $vakken_clusters = $mag_session->getLayout('EduTeam-Lln-lesgroep'); 
+    foreach my $vak (@{$vakken_clusters}){
+        printf("%s %s\n", $vak->{"\x{feff}Stamnr"}, $vak->{'Groep'});
+    }
     
-    #Vakken:
-    #Declare @periode varchar(4)='#lesperiode#'
-    #SELECT DISTINCT
-    #    sis_lvak.idleer AS id_leerling,
-    #    sis_lvak.stamnr AS stamnr,
-    #    sis_bgrp.groep AS groep,
-    #    sis_lvak.c_vak AS course
-    #FROM sis_lvak
-    #    INNER JOIN sis_aanm ON sis_lvak.stamnr = sis_aanm.stamnr
-    #    INNER JOIN sis_bgrp ON sis_bgrp.idbgrp = sis_aanm.idbgrp
-    #    INNER JOIN sis_bvak ON sis_lvak.c_vak = sis_bvak.c_vak
-    #WHERE
-    #    sis_lvak.dbegin <= GETDATE()
-    #    AND
-    #    sis_lvak.deinde > GETDATE()
-    #    AND
-    #    sis_aanm.lesperiode = @periode
-    #ORDER BY 
-    #    sis_lvak.idleer
-    my $vakken = $mag_session->getLayout('EduTeam-Lln-vakken','lesperiode='.$config{'MAGISTER_LESPERIODE'}); # vakken is een AoH, geen lesperiode nodig
-    foreach my $vak (@{$vakken}){
-        # Alleen de aktieve locaties vlgs config
-        if ($vak->{'groep'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
-	        # Eerst een UPN maken van het stambr
-	        my $upn = "b$vak->{'Stamnr'}\@atlascollege.nl";
-            my $rowidLln = $usersByUpn->{$upn}->{'rowid'};
-            # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
-            if ($rowidLln){
-                # Dit zijn vakken, de team naam moet dus samengesteld worden
-                my $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$vak->{'groep'} . '-' . $vak->{'course'};
-                # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
-                my $rowidTeam = $TeamsHoH->{$formattedTeamName};
-                if ($rowidTeam){
-                    #say "Deze wel $vak->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
-                    # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
-                    $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
-                }else{
-                    #$logger->make_log("$FindBin::Script INFO groep $formattedTeamName heeft geen docent");
-                }
-            }else{
-                $logger->make_log("$FindBin::Script WARNING leerling => $upn bestaat niet in Azure");
-            }
-	    }
-    }
+    # #Vakken:
+    # #Declare @periode varchar(4)='#lesperiode#'
+    # #SELECT DISTINCT
+    # #    sis_lvak.idleer AS id_leerling,
+    # #    sis_lvak.stamnr AS stamnr,
+    # #    sis_bgrp.groep AS groep,
+    # #    sis_lvak.c_vak AS course
+    # #FROM sis_lvak
+    # #    INNER JOIN sis_aanm ON sis_lvak.stamnr = sis_aanm.stamnr
+    # #    INNER JOIN sis_bgrp ON sis_bgrp.idbgrp = sis_aanm.idbgrp
+    # #    INNER JOIN sis_bvak ON sis_lvak.c_vak = sis_bvak.c_vak
+    # #WHERE
+    # #    sis_lvak.dbegin <= GETDATE()
+    # #    AND
+    # #    sis_lvak.deinde > GETDATE()
+    # #    AND
+    # #    sis_aanm.lesperiode = @periode
+    # #ORDER BY 
+    # #    sis_lvak.idleer
+    # my $vakken = $mag_session->getLayout('EduTeam-Lln-vakken','lesperiode='.$config{'MAGISTER_LESPERIODE'}); # vakken is een AoH, geen lesperiode nodig
+    # foreach my $vak (@{$vakken}){
+    #     # # Debug
+    #     printf("%s %s %s \n", $vak->{'groep'}, $vak->{'Stamnr'},$vak->{'course'});
+    #     # Alleen de aktieve locaties vlgs config
+    #     if ($vak->{'groep'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
+	#         # Eerst een UPN maken van het stambr
+	#         my $upn = "b$vak->{'Stamnr'}\@atlascollege.nl";
+    #         my $rowidLln = $usersByUpn->{$upn}->{'rowid'};
+    #         # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
+    #         if ($rowidLln){
+    #             # Dit zijn vakken, de team naam moet dus samengesteld worden
+    #             my $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$vak->{'groep'} . '-' . $vak->{'course'};
+    #             # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
+    #             my $rowidTeam = $TeamsHoH->{$formattedTeamName};
+    #             if ($rowidTeam){
+    #                 #say "Deze wel $vak->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
+    #                 # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
+    #                 $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
+    #             }else{
+    #                 #$logger->make_log("$FindBin::Script INFO groep $formattedTeamName heeft geen docent");
+    #             }
+    #         }else{
+    #             $logger->make_log("$FindBin::Script WARNING leerling => $upn bestaat niet in Azure");
+    #         }
+	#     }
+    # }
 
-    #Clusters:
-    #SELECT
-    #    sis_lvak.idleer AS id_leerling,
-    #    sis_lvak.stamnr AS stamnr,
-    #    sis_bgrp.groep AS groep
-    #FROM sis_lvak
-    #    INNER JOIN sis_bgrp ON sis_lvak.idBgrp=sis_bgrp.idBgrp
-    #    INNER JOIN sis_bvak ON sis_lvak.c_vak = sis_bvak.c_vak
-    #WHERE
-    #    sis_lvak.dbegin <= GETDATE()
-    #    AND
-    #    sis_lvak.deinde > GETDATE()
-    #ORDER BY
-    #    sis_lvak.idleer
+    # #Clusters:
+    # #SELECT
+    # #    sis_lvak.idleer AS id_leerling,
+    # #    sis_lvak.stamnr AS stamnr,
+    # #    sis_bgrp.groep AS groep
+    # #FROM sis_lvak
+    # #    INNER JOIN sis_bgrp ON sis_lvak.idBgrp=sis_bgrp.idBgrp
+    # #    INNER JOIN sis_bvak ON sis_lvak.c_vak = sis_bvak.c_vak
+    # #WHERE
+    # #    sis_lvak.dbegin <= GETDATE()
+    # #    AND
+    # #    sis_lvak.deinde > GETDATE()
+    # #ORDER BY
+    # #    sis_lvak.idleer
 
-    my $lesgroepen = $mag_session->getLayout('EduTeam-Lln-lesgroep'); # vakken is een AoH
-    foreach my $lesgroep (@{$lesgroepen}){
-        # Alleen de aktieve locaties vlgs config
-        if ($lesgroep->{'groep'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
-          # Eerst een UPN maken van het stamnr
-          my $upn = "b$lesgroep->{'Stamnr'}\@atlascollege.nl";
-          my $rowidLln = $usersByUpn->{$upn}->{'rowid'};
-          # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
-          if ($rowidLln){
-            my $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'groep'};
-            # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
-            my $rowidTeam = $TeamsHoH->{$formattedTeamName};
-            if ($rowidTeam){
-		    #say "Deze wel $lesgroep->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
-              # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
-              $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
-            }else{
-              #$logger->make_log("$FindBin::Script INFO groep $formattedTeamName heeft geen docent");
-            }
-          }else{
-            say Dumper $lesgroep;
-            $logger->make_log("$FindBin::Script WARNING Leerling => $upn bestaat niet in Azure");
-          }
-       }
-    }
+    # my $lesgroepen = $mag_session->getLayout('EduTeam-Lln-lesgroep'); # vakken is een AoH
+    # foreach my $lesgroep (@{$lesgroepen}){
+    #     # Alleen de aktieve locaties vlgs config
+    #     if ($lesgroep->{'groep'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
+    #       # Eerst een UPN maken van het stamnr
+    #       my $upn = "b$lesgroep->{'Stamnr'}\@atlascollege.nl";
+    #       my $rowidLln = $usersByUpn->{$upn}->{'rowid'};
+    #       # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
+    #       if ($rowidLln){
+    #         my $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'groep'};
+    #         # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
+    #         my $rowidTeam = $TeamsHoH->{$formattedTeamName};
+    #         if ($rowidTeam){
+	# 	    #say "Deze wel $lesgroep->{'groep'} => $upn : $rowidLln => $formattedTeamName : $rowidTeam";
+    #           # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
+    #           $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
+    #         }else{
+    #           #$logger->make_log("$FindBin::Script INFO groep $formattedTeamName heeft geen docent");
+    #         }
+    #       }else{
+    #         say Dumper $lesgroep;
+    #         $logger->make_log("$FindBin::Script WARNING Leerling => $upn bestaat niet in Azure");
+    #       }
+    #    }
+    # }
 }
 
 
@@ -305,7 +311,7 @@ sub Jaarlagen {
 
 my $start = localtime->epoch;
 $logger->make_log("$FindBin::Script INFO Start docenten rooster @ ". localtime);
-Docenten();
+# Docenten();
 my $einde = localtime->epoch;
 $logger->make_log("$FindBin::Script INFO Einde docenten rooster @ ". localtime . " duurde " . ($einde-$start) . " seconden");
 
@@ -316,7 +322,7 @@ $einde = localtime->epoch;
 $logger->make_log("$FindBin::Script INFO Einde leerlingen rooster @ ". localtime . " duurde " . ($einde-$start) . " seconden");
 
 $logger->make_log("$FindBin::Script INFO Start jaarlagen @ ". localtime);
-Jaarlagen();
+# Jaarlagen();
 $logger->make_log("$FindBin::Script INFO Einde jaarlagen @ ". localtime);
 
 $sth_users->finish;

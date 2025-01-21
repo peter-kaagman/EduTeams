@@ -40,17 +40,17 @@ my $group_object = MsGroup->new(
     'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
     'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
     'id'            => $group_id,
-    'select'        => '$select=id,displayName,userPrincipalName,employeeId'
+    'select'        => '$select=id,displayName,userPrincipalName,employeeId,accountEnabled,createdDateTime'
 );
 
 my $members = $group_object->group_fetch_members();
 
 my $count = 0;
 foreach my $member (@{$members}){
-    if ($member->{'employeeId'}){
+    if ($member->{'employeeId'} || !$member->{'accountEnabled'}){
         #say lc($member->{'userPrincipalName'})," => $member->{'employeeId'}"
     }else{
         $count++;
-        say "$count :",lc($member->{'userPrincipalName'}), " => geen employeeId"
+        say "$count :",lc($member->{'userPrincipalName'}), " => geen employeeId", " => ", $member->{'createdDateTime'};
     }
 }
