@@ -108,52 +108,28 @@ sub getMagisterTeamROWID {
 }
 
 sub Docenten {
-    # We gaan niet langer per docent de roosters opvragen
-    # we vragen echter een één custom queries op voor vakken en groepen
-
-    #Clusters:
-    #Declare @periode varchar(4)='#lesperiode#'
-    #SELECT DISTINCT
-    #    sis_pers.stamnr AS stamnummer,
-    #    sis_pers.E_Mailwerk AS email,
-    #    sis_bgrp.groep as KlasGroep,
-    #    sis_blok.c_lokatie as LocatieCode,
-    #    sis_pgvk.c_vak
-    #FROM sis_pgvk
-    #    LEFT JOIN sis_pers on sis_pgvk.idPers=sis_pers.idPers
-    #    LEFT JOIN sis_bgrp on sis_pgvk.idBgrp=sis_bgrp.idBgrp
-    #    LEFT JOIN sis_blpe on sis_pgvk.lesperiode=sis_blpe.lesperiode
-    #    LEFT JOIN sis_bvak on sis_pgvk.c_vak=sis_bvak.c_vak
-    #    LEFT JOIN sis_blok on sis_bgrp.c_lokatie=sis_blok.c_lokatie
-    #WHERE 
-    #    sis_blpe.lesperiode = @periode
-
     # De query haalt zowel lesgroepen als vakgroepen op
     # De vakgroep moet gecombineerd worden met de vakcode
     my $lesgroepen = $mag_session->getLayout('EduTeam-Doc-lesgroep','lesperiode='.$config{'MAGISTER_LESPERIODE'}); # vakken is een AoH
     foreach my $lesgroep (@{$lesgroepen}){
         # Alleen de aktieve locaties vlgs config
-        if ($lesgroep->{'KlasGroep'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
-            my $rowidDoc = $usersByUpn->{ lc($lesgroep->{'email'}) }->{'rowid'};
+        if ($lesgroep->{'team'} =~/^$config{'MAGISTER_LESPERIODE'}-($config{'AKTIEVE_LOCATIES'}).+/){
+            # printf("%s %s\n", $lesgroep->{"\x{feff}email"}, $lesgroep->{"team"});
+            my $rowidDoc = $usersByUpn->{ lc($lesgroep->{"\x{feff}email"}) }->{'rowid'};
             # Alleen door als er een rowID is voor de docent => hij bestaat in Azure
             if ($rowidDoc){
-                #say Dumper $lesgroep;
-                my ($rowidTeam, $formattedTeamName);
-                if ($lesgroep->{'KlasGroep'} =~ /^\d.+\..+/){
-                        $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'};
-                        $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
-                }else{
-                        $formattedTeamName = $config{'MAGISTER_LESPERIODE'}.'-'.$lesgroep->{'KlasGroep'}.'-'.$lesgroep->{'Vak'};
-                        $rowidTeam = getMagisterTeamROWID($formattedTeamName, $lesgroep->{'LocatieCode'}, 'cluster');
-                }
+                my $rowidTeam = getMagisterTeamROWID($lesgroep->{'team'}, $lesgroep->{'LocatieCode'}, 'cluster');
                 # Er zijn nu voldoende gevens om hier een rooster entry voor te maken
-                $logger->make_log("$FindBin::Script INFO $lesgroep->{'email'} : $rowidDoc => $formattedTeamName : $rowidTeam");
+                $logger->make_log("$FindBin::Script INFO " . $lesgroep->{"\x{feff}email"} . " => $rowidDoc => $lesgroep->{'team'} : $rowidTeam");
                 #my $qry = "Insert Into magisterdocentenrooster (docid,teamid) values (?,?) ";
                 $sth_magisterdocentenrooster->execute($rowidDoc,$rowidTeam);
             }else{
-                say Dumper $lesgroep;
+        #         say Dumper $lesgroep;
                 $logger->make_log("$FindBin::Script WARNING Docent => $lesgroep->{'email'} bestaat niet in Azure");
             }
+        # }else{
+        #     say "Niet aktief";
+        #     say Dumper $lesgroep;
         }
     }
 }
@@ -165,7 +141,7 @@ sub Leerlingen {
     # StamNr en Team naam komen formatted terug uit de query
     my $vakken_clusters = $mag_session->getLayout('EduTeam-Lln-lesgroep','lesperiode='.$config{'MAGISTER_LESPERIODE'}); 
     foreach my $vak (@{$vakken_clusters}){
-        if ($vak->{'code'} =~/^($config{'AKTIEVE_LOCATIES'}).+/){
+        if ($vak->{'code'} =~/^$config{'MAGISTER_LESPERIODE'}-($config{'AKTIEVE_LOCATIES'}).+/){
             # printf("%s %s\n", $vak->{"\x{feff}b_nummer"}, $vak->{'code'});
             # Alleen door als er een rowID is voor de lln => hij bestaat in Azure
             my $upn = $vak->{"\x{feff}b_nummer"}.'@atlascollege.nl';
@@ -174,15 +150,18 @@ sub Leerlingen {
                 # Als het rowid voor dit team niet bestaat dan is er geen docent voor de groep
                 my $rowidTeam = $TeamsHoH->{$vak->{'code'}};
                 if ($rowidTeam){
-                    say "Deze wel $vak->{'code'} => $upn : $rowidLln => $vak->{'code'} : $rowidTeam";
+                    # say "Deze wel $vak->{'code'} => $upn : $rowidLln => $vak->{'code'} : $rowidTeam";
+                    $logger->make_log("$FindBin::Script INFO  $upn => $rowidLln => $vak->{'code'} : $rowidTeam");
                     # "Insert Into magisterleerlingenrooster (leerlingid,teamid) values (?,?) ";
                     $sth_magisterleerlingenrooster->execute($rowidLln,$rowidTeam);
                 # }else{
-                    # say "$vak->{'code'} heeft geen docent";
+                #     say "$vak->{'code'} heeft geen docent";
                 }
             }else{
                 $logger->make_log("$FindBin::Script WARNING leerling => $upn bestaat niet in Azure");
             }
+        # } else {
+        #     say "Geen aktieve locatie"
         }
     }
 }
@@ -254,7 +233,7 @@ $einde = localtime->epoch;
 $logger->make_log("$FindBin::Script INFO Einde leerlingen rooster @ ". localtime . " duurde " . ($einde-$start) . " seconden");
 
 $logger->make_log("$FindBin::Script INFO Start jaarlagen @ ". localtime);
-# Jaarlagen();
+Jaarlagen();
 $logger->make_log("$FindBin::Script INFO Einde jaarlagen @ ". localtime);
 
 $sth_users->finish;

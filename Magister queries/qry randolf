@@ -64,15 +64,3 @@ WHERE sis_lvak.lesperiode = sis_aanm.lesperiode
     else Concat(Convert(Char(2), Right((Year(GetDate())-1),2)), Convert(Char(2), Right(Year(GetDate()),2)))
   end
   and sis_aanm.dvertrek is null
-
-Oorspronkelijk
-SELECT
-    sis_lvak.idleer AS id_leerling,
-    sis_lvak.stamnr AS stamnr,
-    sis_bgrp.groep AS groep
-FROM sis_lvak
-    INNER JOIN sis_bgrp ON sis_lvak.idBgrp=sis_bgrp.idBgrp
-    INNER JOIN sis_bvak ON sis_lvak.c_vak = sis_bvak.c_vak
-WHERE  sis_lvak.dbegin <= GETDATE()
-AND sis_lvak.deinde > GETDATE()
-ORDER BY  sis_lvak.idleer

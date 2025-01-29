@@ -29,7 +29,7 @@ my $groups_object = MsGroups->new(
 );
 
 my $group_id = $groups_object->group_find_id('personeel');
-say $group_id;
+# say $group_id;
 
 my $group_object = MsGroup->new(
     'app_id'        => $config{'APP_ID'},
@@ -40,17 +40,24 @@ my $group_object = MsGroup->new(
     'login_endpoint'=> $config{'LOGIN_ENDPOINT'},
     'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
     'id'            => $group_id,
-    'select'        => '$select=id,displayName,userPrincipalName,employeeId,accountEnabled,createdDateTime'
+    'select'        => '$select=id,displayName,userPrincipalName,employeeId,accountEnabled,createdDateTime,mailNickname'
 );
 
 my $members = $group_object->group_fetch_members();
 
 my $count = 0;
 foreach my $member (@{$members}){
-    if ($member->{'employeeId'} || !$member->{'accountEnabled'}){
-        #say lc($member->{'userPrincipalName'})," => $member->{'employeeId'}"
-    }else{
-        $count++;
-        say "$count :",lc($member->{'userPrincipalName'}), " => geen employeeId", " => ", $member->{'createdDateTime'};
+    # if ($member->{'employeeId'} || !$member->{'accountEnabled'}){
+    #     #say lc($member->{'userPrincipalName'})," => $member->{'employeeId'}"
+    # }else{
+    #     $count++;
+    #     say "$count :",lc($member->{'userPrincipalName'}), " => geen employeeId", " => ", $member->{'createdDateTime'};
+    # }
+    if (
+        $member->{'employeeId'} && 
+    #     length($member->{'mailNickname'}) ne 3 && 
+        $member->{'accountEnabled'}
+    ){
+        printf("%s\t%s\t%s\n", $member->{'userPrincipalName'},$member->{'employeeId'},$member->{'mailNickname'});
     }
 }
