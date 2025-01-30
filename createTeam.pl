@@ -70,6 +70,7 @@ my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1 })
 my $sth_team_gemaakt = $dbh->prepare('Update teamcreated Set team_gemaakt = ? Where rowid = ?'); 
 my $sth_general = $dbh->prepare('Update teamcreated Set general_checked = ? Where rowid = ?'); 
 my $sth_writeback_members = $dbh->prepare('Update teamcreated Set members = ? Where rowid = ?');
+my $sth_delete_entry = $dbh->prepare('Delete From teamcreated Where rowid = ?');
 
 my $groups_object = MsGroups->new(
     'app_id'        => $config{'APP_ID'},
@@ -157,6 +158,9 @@ sub groupsToTeams {
             $sth_team_gemaakt->execute(encode_json(localtime->epoch), $ident);
         }else{
             $logger->make_log("$FindBin::Script ERROR Group transitie: $result->{'naam'} ". $result->decoded_content);
+            # Als het record blijft staan dan zal prodWrapper nooit meer starten
+            # $sth_delete_entry = $dbh->prepare('Delete From teamcreate Where rowid = ?');
+            $sth_delete_entry->execute($ident);
         }
     });
     TRANSITIE:

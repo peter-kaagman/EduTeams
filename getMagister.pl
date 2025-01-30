@@ -71,7 +71,8 @@ my $TeamsHoH; # ipv zoeken in de database
 
 # Users
 # Users dient als zoek hash 
-my $sth_users = $dbh->prepare("Select azureid,upn,ROWID From users");
+# Alleen active users in de resultset issue 12
+my $sth_users = $dbh->prepare("Select azureid,upn,ROWID From users Where active = 1");
 $sth_users->execute();
 my $usersByUpn = $sth_users->fetchall_hashref('upn');
 
@@ -125,7 +126,7 @@ sub Docenten {
                 $sth_magisterdocentenrooster->execute($rowidDoc,$rowidTeam);
             }else{
         #         say Dumper $lesgroep;
-                $logger->make_log("$FindBin::Script WARNING Docent => $lesgroep->{'email'} bestaat niet in Azure");
+                $logger->make_log("$FindBin::Script WARNING Docent => ".$lesgroep->{"\x{feff}email"}." bestaat niet in Azure of is niet aktief");
             }
         # }else{
         #     say "Niet aktief";

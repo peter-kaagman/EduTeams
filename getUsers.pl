@@ -58,7 +58,7 @@ if (
 
 # users
 $dbh->do('Delete From users'); # Truncate the table 
-my $qry = "Insert Into users (upn, azureid, naam, locatie,stamnr,type) values (?,?,?,?,?,?) ";
+my $qry = "Insert Into users (upn, azureid, naam, locatie,stamnr,type,active) values (?,?,?,?,?,?,?) ";
 my $sth_users_add = $dbh->prepare($qry);
 
 my $users_object = MsUsers->new(
@@ -69,7 +69,7 @@ my $users_object = MsUsers->new(
 	'graph_endpoint'=> $config{'GRAPH_ENDPOINT'},
 	#'filter'        => '$filter=endswith(mail,\'atlascollege.nl\')', 
 	#'filter'        => '$filter=userType eq \'Member\'', 
-    'select'        => '$select=id,displayName,userPrincipalName,Department,employeeId',
+    'select'        => '$select=id,displayName,userPrincipalName,Department,employeeId,accountEnabled',
 	#'consistencylevel' => 'eventual',
 );
 
@@ -91,13 +91,15 @@ foreach my $user (@{$users}){
 	}else{
 		$type = 'staf';
 	}
+	my $active = $user->{'accountEnabled'};
 	$sth_users_add->execute(
 		lc($user->{'userPrincipalName'}),
 		$user->{'id'},
 		$user->{'displayName'},
 		$locatie,
 		$user->{'employeeId'},
-		$type
+		$type,
+		$active
 	); # unless ($locatie eq '99')
 }
 $logger->make_log("$FindBin::Script INFO einde");
