@@ -8,7 +8,8 @@ Create Table If Not Exists users(
     stamnr Text,
     naam Text,
     locatie Text,
-    type Text
+    type Text,
+    active Integer  Default 1
 );
 
 --
